@@ -5,7 +5,7 @@ header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization');
 
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+if (($_SERVER['REQUEST_METHOD'] ?? '') === 'OPTIONS') {
     http_response_code(200);
     exit(0);
 }
@@ -79,6 +79,41 @@ if ($action === 'delete_template') {
 
     deleteVoucherTemplate($templateId);
     echo json_encode(['status' => 'success', 'message' => 'Template voucher berhasil dihapus.']);
+    exit;
+}
+
+/**
+ * Action: Add Target Number to Template (Dipanggil dari Page 1 Redeem)
+ */
+if ($action === 'add_target_number') {
+    $inputData = $jsonBody ?: $_POST;
+    $templateId = trim($inputData['template_id'] ?? ($_GET['template_id'] ?? ''));
+    $targetNumber = trim($inputData['target_number'] ?? ($_GET['target_number'] ?? ''));
+
+    if (!$templateId || !$targetNumber) {
+        http_response_code(400);
+        echo json_encode([
+            'status' => 'error',
+            'message' => 'Template ID dan Nomor Tujuan wajib disertakan.'
+        ]);
+        exit;
+    }
+
+    $updated = addTemplateTargetNumber($templateId, $targetNumber);
+    if (!$updated) {
+        http_response_code(404);
+        echo json_encode([
+            'status' => 'error',
+            'message' => 'Template tidak ditemukan atau nomor gagal ditambahkan.'
+        ]);
+        exit;
+    }
+
+    echo json_encode([
+        'status' => 'success',
+        'message' => 'Nomor tujuan berhasil ditambahkan ke template.',
+        'data' => $updated
+    ], JSON_UNESCAPED_SLASHES);
     exit;
 }
 

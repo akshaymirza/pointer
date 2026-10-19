@@ -56,12 +56,12 @@ include 'includes/sidebar.php';
         <thead>
           <tr>
             <th style="width: 220px;">Nama Template</th>
-            <th style="width: 140px;">Nomor Pengirim</th>
+            <th style="width: 180px;">Username / Pengirim</th>
             <th>Base Target URL</th>
-            <th style="width: 130px;">Keyword Sukses</th>
-            <th style="width: 130px;">Keyword Gagal</th>
-            <th style="width: 90px; text-align: center;">Default</th>
-            <th style="width: 130px; text-align: right;">Aksi</th>
+            <th style="width: 120px;">Keyword Sukses</th>
+            <th style="width: 120px;">Keyword Gagal</th>
+            <th style="width: 80px; text-align: center;">Default</th>
+            <th style="width: 120px; text-align: right;">Aksi</th>
           </tr>
         </thead>
         <tbody id="templateTableBody">
@@ -116,24 +116,42 @@ include 'includes/sidebar.php';
             </label>
           </div>
 
-          <!-- Nomor Pengirim (Username) Khusus Operator / Template Ini -->
+          <!-- Pengaturan Username & Nomor Pengirim Khusus Template Ini -->
           <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 14px; padding: 16px 18px; margin-bottom: 18px;">
-            <label style="display: grid; gap: 6px;">
-              <div style="display: flex; justify-content: space-between; align-items: baseline;">
-                <span style="font-size: 14px; font-weight: 700; color: #1e3a8a;">📱 Nomor Pengirim (Username) Khusus Template Ini</span>
-                <span style="font-size: 11px; color: var(--primary); font-weight: 600;">Otomatis terpilih saat template dipilih</span>
-              </div>
-              <input 
-                type="text" 
-                id="templateDefaultSender" 
-                name="default_sender" 
-                placeholder="Contoh: 089523098721 atau nomor chip operator" 
-                style="height: 46px; font-family: monospace; font-size: 14px; font-weight: 600;"
-              />
-              <small style="color: #1e40af; font-size: 12px; line-height: 1.4;">
-                Setiap operator/provider biasanya menggunakan nomor pengirim yang berbeda. Nomor ini akan otomatis menjadi nomor pengirim aktif saat template ini dipilih di halaman redeem.
-              </small>
-            </label>
+            <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px;">
+              <span style="font-size: 14px; font-weight: 700; color: #1e3a8a;">📱 Pengaturan Username / Pengirim Khusus Template Ini</span>
+              <span style="font-size: 11px; color: var(--primary); font-weight: 600;">Eksklusif per Template</span>
+            </div>
+
+            <div class="form-grid two-col" style="grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 8px;">
+              <label>
+                <span style="font-size: 13px; font-weight: 600; color: #1e40af;">Daftar Username Diberikan Admin (Bisa Lebih Dari 1) *</span>
+                <textarea 
+                  id="templateAllowedUsernames" 
+                  name="allowed_usernames" 
+                  rows="3" 
+                  placeholder="Contoh:&#10;089523098721&#10;089512345678" 
+                  oninput="syncDefaultSenderDropdown()"
+                  style="height: 80px; font-family: monospace; font-size: 13px; font-weight: 600; line-height: 1.5; resize: vertical;"
+                ></textarea>
+                <small style="color: #1e40af; font-size: 11px;">1 username per baris atau pisahkan dengan koma.</small>
+              </label>
+
+              <label>
+                <span style="font-size: 13px; font-weight: 600; color: #1e40af;">Username Utama (Default Terpilih)</span>
+                <select 
+                  id="templateDefaultSender" 
+                  name="default_sender" 
+                  style="height: 46px; font-family: monospace; font-size: 14px; font-weight: 600; background: white;"
+                >
+                  <option value="">-- Masukkan daftar username di sebelah kiri dahulu --</option>
+                </select>
+                <small style="color: #1e40af; font-size: 11px;">Pilih 1 username dari daftar di kiri yang otomatis terpilih di Halaman Redeem.</small>
+              </label>
+            </div>
+            <p style="margin: 0; font-size: 12px; color: #1e40af; line-height: 1.4;">
+              💡 <em>Catatan:</em> Di halaman Redeem, saat template ini dipilih, hanya daftar username di atas yang muncul. Jika user berganti template, username template lama otomatis hilang dan digantikan oleh username milik template baru.
+            </p>
           </div>
 
           <!-- Jadikan Default Checkbox -->
@@ -344,7 +362,7 @@ async function loadAllTemplates() {
 function renderTemplateTable(items) {
   const tbody = document.getElementById('templateTableBody');
   if (!items || !items.length) {
-    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:24px; color:var(--muted);">Belum ada template. Silakan buat baru.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:24px; color:var(--muted);">Belum ada template. Silakan buat baru.</td></tr>`;
     return;
   }
 
@@ -355,6 +373,16 @@ function renderTemplateTable(items) {
       ? '<span class="badge success" style="font-size:10px;">★ DEFAULT</span>' 
       : '<span style="color:var(--muted); font-size:12px;">-</span>';
 
+    // Rangkum username
+    const usernames = Array.isArray(t.allowed_usernames) ? t.allowed_usernames : (t.default_sender ? [t.default_sender] : []);
+    let senderDisplay = '<span style="color:var(--muted); font-size:11px;">Belum diatur</span>';
+    if (usernames.length > 0) {
+      senderDisplay = usernames.map(u => {
+        const isMain = (u === t.default_sender) ? ' style="border: 1px solid #2563eb; font-weight:700;" title="Username Utama (Default)"' : '';
+        return `<span style="font-family:monospace; font-size:12px; color:#1e3a8a; background:#e0f2fe; padding:2px 6px; border-radius:4px; margin-right:4px; display:inline-block; margin-bottom:2px;"${isMain}>${escapeHtml(u)}${u === t.default_sender ? ' ★' : ''}</span>`;
+      }).join('');
+    }
+
     return `
       <tr style="${rowBg} border-bottom: 1px solid var(--border);">
         <td>
@@ -362,12 +390,10 @@ function renderTemplateTable(items) {
           ${t.description ? `<br><small style="color:var(--muted); font-size:11px;">${escapeHtml(t.description)}</small>` : ''}
         </td>
         <td>
-          <span style="font-family: monospace; font-size: 13px; font-weight: 600; color: #1e3a8a;">
-            ${escapeHtml(t.default_sender || '-')}
-          </span>
+          <div>${senderDisplay}</div>
         </td>
         <td>
-          <span class="truncate" style="max-width: 250px; font-family: monospace; font-size: 12px; color: var(--primary);" title="${escapeHtml(t.base_target_url)}">
+          <span class="truncate" style="max-width: 250px; font-family: monospace; font-size: 11px; color: var(--primary);" title="${escapeHtml(t.base_target_url)}">
             ${escapeHtml(t.base_target_url)}
           </span>
         </td>
@@ -391,13 +417,47 @@ function filterTemplateTable() {
     renderTemplateTable(allTemplates);
     return;
   }
-  const filtered = allTemplates.filter(t => 
-    (t.name && t.name.toLowerCase().includes(query)) ||
-    (t.default_sender && t.default_sender.toLowerCase().includes(query)) ||
-    (t.base_target_url && t.base_target_url.toLowerCase().includes(query)) ||
-    (t.description && t.description.toLowerCase().includes(query))
-  );
+  const filtered = allTemplates.filter(t => {
+    const uList = (Array.isArray(t.allowed_usernames) ? t.allowed_usernames.join(' ') : (t.default_sender || '')).toLowerCase();
+    return (t.name && t.name.toLowerCase().includes(query)) ||
+      uList.includes(query) ||
+      (t.base_target_url && t.base_target_url.toLowerCase().includes(query)) ||
+      (t.description && t.description.toLowerCase().includes(query));
+  });
   renderTemplateTable(filtered);
+}
+
+// Helper sinkronisasi dropdown Username Utama dari isi textarea
+function syncDefaultSenderDropdown(selectedValue = '') {
+  const textarea = document.getElementById('templateAllowedUsernames');
+  const select = document.getElementById('templateDefaultSender');
+  if (!textarea || !select) return;
+
+  const currentVal = selectedValue || select.value;
+  const usernames = textarea.value
+    .split(/[\r\n,]+/)
+    .map(s => s.trim())
+    .filter(s => s.length > 0);
+
+  select.innerHTML = '';
+
+  if (usernames.length === 0) {
+    select.innerHTML = '<option value="">-- Masukkan daftar username di sebelah kiri dahulu --</option>';
+    return;
+  }
+
+  usernames.forEach(u => {
+    const opt = document.createElement('option');
+    opt.value = u;
+    opt.textContent = u;
+    select.appendChild(opt);
+  });
+
+  if (currentVal && usernames.includes(currentVal)) {
+    select.value = currentVal;
+  } else {
+    select.value = usernames[0];
+  }
 }
 
 // 2. Pilih Template untuk Diedit
@@ -414,7 +474,16 @@ function selectTemplateForEdit(id) {
   document.getElementById('templateIdInput').value = t.id;
   document.getElementById('templateName').value = t.name || '';
   document.getElementById('templateDescription').value = t.description || '';
-  document.getElementById('templateDefaultSender').value = t.default_sender || '';
+  
+  // Format daftar username untuk textarea
+  const uList = Array.isArray(t.allowed_usernames) && t.allowed_usernames.length 
+    ? t.allowed_usernames 
+    : (t.default_sender ? [t.default_sender] : []);
+  document.getElementById('templateAllowedUsernames').value = uList.join('\n');
+  
+  // Sinkronkan dropdown Username Utama
+  syncDefaultSenderDropdown(t.default_sender || (uList[0] || ''));
+
   document.getElementById('templateIsDefault').checked = !!t.is_default;
   document.getElementById('baseTargetUrl').value = t.base_target_url || '';
   document.getElementById('successKeyword').value = t.success_keyword || '';
@@ -442,7 +511,8 @@ function createNewTemplateForm() {
   document.getElementById('templateIdInput').value = '';
   document.getElementById('templateName').value = '';
   document.getElementById('templateDescription').value = '';
-  document.getElementById('templateDefaultSender').value = '';
+  document.getElementById('templateAllowedUsernames').value = '';
+  syncDefaultSenderDropdown('');
   document.getElementById('templateIsDefault').checked = false;
   document.getElementById('baseTargetUrl').value = 'https://example.com/check-voucher?voucher={voucher}';
   document.getElementById('successKeyword').value = 'SUKSES';
@@ -464,6 +534,7 @@ async function handleSaveTemplate(e) {
   const id = document.getElementById('templateIdInput').value.trim();
   const name = document.getElementById('templateName').value.trim();
   const description = document.getElementById('templateDescription').value.trim();
+  const allowedUsernamesRaw = document.getElementById('templateAllowedUsernames').value;
   const defaultSender = document.getElementById('templateDefaultSender').value.trim();
   const isDefault = document.getElementById('templateIsDefault').checked ? 1 : 0;
   const baseTargetUrl = document.getElementById('baseTargetUrl').value.trim();
@@ -479,6 +550,12 @@ async function handleSaveTemplate(e) {
     return;
   }
 
+  // Parse allowed_usernames (baris / koma)
+  const allowedUsernames = allowedUsernamesRaw
+    .split(/[\r\n,]+/)
+    .map(s => s.trim())
+    .filter(s => s.length > 0);
+
   const saveBtn = document.getElementById('saveTemplateBtn');
   const saveBtnText = document.getElementById('saveBtnText');
   const saveBtnIcon = document.getElementById('saveBtnIcon');
@@ -491,7 +568,8 @@ async function handleSaveTemplate(e) {
     id: id,
     name: name,
     description: description,
-    default_sender: defaultSender,
+    default_sender: defaultSender || (allowedUsernames[0] || ''),
+    allowed_usernames: allowedUsernames,
     is_default: isDefault,
     base_target_url: baseTargetUrl,
     success_keyword: successKeyword,

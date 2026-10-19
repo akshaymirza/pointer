@@ -71,32 +71,35 @@ include 'includes/sidebar.php';
             <div style="display: flex; flex-direction: column; gap: 14px;">
               <label>
                 <div style="display:flex; justify-content:space-between; align-items:center;">
-                  <span>Nomor Pengirim (Username)</span>
-                  <button type="button" class="text-button" onclick="openSenderModal()" style="font-size: 11px; padding: 0; color: var(--primary); font-weight: 600; cursor: pointer;">
-                    ⚙️ Atur Daftar Pengirim
-                  </button>
+                  <span style="font-weight: 600;">Nomor Pengirim (Username) Khusus Template</span>
+                  <a href="voucher_settings.php" target="_blank" style="font-size: 11px; text-decoration: none; color: var(--primary); font-weight: 600;" title="Kelola username untuk setiap template di Voucher Settings">
+                    ⚙️ Kelola di Voucher Settings
+                  </a>
                 </div>
                 <div style="display: flex; gap: 6px;">
-                  <select id="usernameSelect" onchange="handleSenderChange(this.value)" style="flex: 1; height: 46px;">
-                    <option value="089523098721">089523098721 (Akun Utama)</option>
+                  <select id="usernameSelect" onchange="handleSenderChange(this.value)" disabled style="flex: 1; height: 46px; font-family: monospace; font-weight: 600;">
+                    <option value="">-- Pilih Template Terlebih Dahulu --</option>
                   </select>
                 </div>
                 <!-- Hidden input untuk menjaga kompatibilitas nilai username -->
-                <input type="hidden" id="usernameInput" value="089523098721" />
+                <input type="hidden" id="usernameInput" value="" />
               </label>
 
               <label>
                 <div style="display:flex; justify-content:space-between; align-items:center;">
-                  <span>Nomor Tujuan</span>
-                  <span style="font-size:11px; font-weight:normal; color:var(--primary);">Bebas diubah</span>
+                  <span style="font-weight: 600;">Nomor Tujuan *</span>
+                  <span style="font-size:11px; font-weight:normal; color:var(--muted);">Diisi oleh user</span>
                 </div>
                 <input 
                   type="text" 
                   id="tujuanInput" 
-                  value="0895639154834" 
-                  placeholder="Contoh: 0895639154834" 
+                  value="" 
+                  placeholder="Contoh: 0895639154834 (kosong secara default)" 
+                  oninput="handleTujuanInput(this.value)"
                   required 
+                  style="height: 46px; font-family: monospace; font-size: 14px; font-weight: 600;"
                 />
+                <small style="color: var(--muted); font-size: 11px;">Nomor tujuan wajib diisi sebelum memproses redeem.</small>
               </label>
             </div>
 
@@ -104,8 +107,8 @@ include 'includes/sidebar.php';
             <label style="margin-top: 6px;">
               <div style="display:flex; justify-content:space-between; align-items:center;">
                 <span style="font-size: 15px; font-weight: 700; color: #1e293b;">Nomor / Kode Voucher</span>
-                <span id="activeTargetBadge" style="font-size: 12px; color: var(--primary); font-weight: 600; background: #eff6ff; padding: 2px 8px; border-radius: 6px;">
-                  Tujuan: 0895639154834
+                <span id="activeTargetBadge" style="font-size: 12px; color: var(--muted); font-weight: 600; background: #f1f5f9; padding: 2px 8px; border-radius: 6px;">
+                  Tujuan: (Belum diisi)
                 </span>
               </div>
               <input 
@@ -226,8 +229,8 @@ include 'includes/sidebar.php';
           🔄 Refresh
         </button>
 
-        <button class="secondary-button" onclick="exportRedeemHistory()" style="height: 38px; min-height: 38px; padding: 0 14px; font-size: 13px;" title="Export Excel / CSV">
-          📥 Export CSV
+        <button class="secondary-button" onclick="exportRedeemHistoryXlsx()" style="height: 38px; min-height: 38px; padding: 0 14px; font-size: 13px;" title="Download Excel (.xlsx)">
+          📥 Download XLSX
         </button>
       </div>
     </div>
@@ -278,55 +281,6 @@ include 'includes/sidebar.php';
         </tbody>
       </table>
     </div>
-  <!-- Modal Kelola Daftar Nomor Pengirim (Username) -->
-  <div class="modal-backdrop hidden" id="senderModal" role="dialog" aria-modal="true" style="z-index: 1000; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.45); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
-    <div class="modal" style="background: white; border-radius: 18px; padding: 24px; max-width: 480px; width: 92%; box-shadow: 0 20px 40px rgba(0,0,0,0.18);">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
-        <h3 style="margin: 0; font-size: 17px; font-weight: 700; color: #0f172a;">Kelola Nomor Pengirim (Username)</h3>
-        <button type="button" class="text-button" onclick="closeSenderModal()" style="font-size: 18px; padding: 4px;">✕</button>
-      </div>
-      
-      <p style="font-size: 13px; color: var(--muted); margin-bottom: 16px;">
-        Tambah atau hapus nomor akun pengirim yang akan muncul di pilihan dropdown.
-      </p>
-
-      <!-- Form Tambah Nomor Pengirim -->
-      <form onsubmit="handleAddNewSender(event)" style="background: #f8fafc; border: 1px solid var(--border); border-radius: 12px; padding: 12px; margin-bottom: 16px;">
-        <div style="font-size: 12px; font-weight: 600; color: #334155; margin-bottom: 8px;">+ Tambah Nomor Baru</div>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
-          <input type="text" id="newSenderUsername" placeholder="Contoh: 089523098721" required style="height: 38px; font-size: 13px;" />
-          <input type="text" id="newSenderLabel" placeholder="Label (cth: Akun 1)" style="height: 38px; font-size: 13px;" />
-        </div>
-        <button type="submit" class="primary-button" style="width: 100%; min-height: 36px; height: 36px; font-size: 13px; padding: 0 12px;">
-          Simpan ke Dropdown
-        </button>
-      </form>
-
-      <!-- List Pengirim yang Ada -->
-      <div style="max-height: 220px; overflow-y: auto; border: 1px solid var(--border); border-radius: 12px;">
-        <table style="width: 100%; min-width: 100%; font-size: 13px;">
-          <thead>
-            <tr style="background: #f1f5f9; border-bottom: 1px solid var(--border);">
-              <th style="padding: 8px 12px; font-size: 11px;">Nomor / Username</th>
-              <th style="padding: 8px 12px; font-size: 11px;">Label</th>
-              <th style="padding: 8px 12px; font-size: 11px; text-align: right;">Aksi</th>
-            </tr>
-          </thead>
-          <tbody id="senderListTableBody">
-            <tr>
-              <td colspan="3" style="text-align:center; padding: 16px; color: var(--muted);">Memuat daftar pengirim...</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <div style="margin-top: 18px; text-align: right;">
-        <button type="button" class="secondary-button" onclick="closeSenderModal()" style="min-height: 38px; height: 38px; font-size: 13px;">
-          Selesai / Tutup
-        </button>
-      </div>
-    </div>
-  </div>
 </section>
 
 <script>
@@ -408,13 +362,11 @@ function renderVoucherTemplateDropdown() {
   const savedTemplateId = localStorage.getItem('redeem_active_template_id');
   if (savedTemplateId && sorted.some(t => t.id === savedTemplateId)) {
     select.value = savedTemplateId;
-    currentVoucherTemplateId = savedTemplateId;
-    updateActiveTemplateUI(savedTemplateId);
+    handleTemplateSelectChange(savedTemplateId);
   } else {
     // Default: Tidak memilih apa-apa
     select.value = '';
-    currentVoucherTemplateId = '';
-    updateActiveTemplateUI('');
+    handleTemplateSelectChange('');
   }
 }
 
@@ -423,8 +375,8 @@ function handleTemplateSelectChange(templateId) {
   localStorage.setItem('redeem_active_template_id', templateId);
   updateActiveTemplateUI(templateId);
 
-  // Setiap template memiliki nomor pengirim sendiri-sendiri
-  applySenderForCurrentTemplate();
+  // Perbaikan 1: Terapkan username khusus template (username template lain hilang)
+  applyTemplateUsernames(templateId);
 }
 
 function updateActiveTemplateUI(templateId) {
@@ -450,189 +402,84 @@ function updateActiveTemplateUI(templateId) {
   }
 }
 
-// Sender Accounts Management (Dropdown Pengirim)
-let senderList = [];
-
-async function fetchSenders() {
-  try {
-    const res = await fetch('redeem_api.php?action=list_senders');
-    const json = await res.json();
-    if (json.status === 'success' && json.data) {
-      senderList = json.data;
-    } else {
-      senderList = [{ id: 1, username: '089523098721', label: 'Akun Utama Tri' }];
-    }
-  } catch (e) {
-    senderList = [{ id: 1, username: '089523098721', label: 'Akun Utama Tri' }];
-  }
-  renderSenderDropdown();
-}
-
-function renderSenderDropdown() {
-  const select = document.getElementById('usernameSelect');
-  if (!select) return;
-
-  select.innerHTML = '';
-  senderList.forEach(s => {
-    const opt = document.createElement('option');
-    opt.value = s.username;
-    opt.textContent = s.label && s.label !== s.username ? `${s.username} (${s.label})` : s.username;
-    select.appendChild(opt);
-  });
-
-  applySenderForCurrentTemplate();
-}
-
-// Pasang pengirim khusus untuk template yang sedang dipilih
-function applySenderForCurrentTemplate() {
+// PERBAIKAN 1: Pengaturan Username/Pengirim Eksklusif per Template
+function applyTemplateUsernames(templateId) {
   const select = document.getElementById('usernameSelect');
   const hiddenInput = document.getElementById('usernameInput');
   if (!select || !hiddenInput) return;
 
-  const activeTpl = voucherTemplates.find(item => item.id === currentVoucherTemplateId);
-  const templateDefaultSender = activeTpl && activeTpl.default_sender ? activeTpl.default_sender.trim() : '';
+  // Bersihkan semua username sebelumnya (jika ganti template, username template lama hilang)
+  select.innerHTML = '';
 
-  const storageKey = currentVoucherTemplateId 
-    ? `redeem_sender_tpl_${currentVoucherTemplateId}` 
-    : 'redeem_sender_global';
-
-  // Prioritas:
-  // 1. Nomor tersimpan di LocalStorage jika user pernah memilih manual untuk template ini
-  // 2. Default sender bawaan template (dikonfigurasi di voucher_settings.php)
-  // 3. Sender pertama dari daftar senderList
-  const savedSender = localStorage.getItem(storageKey) || templateDefaultSender || (senderList[0] ? senderList[0].username : '089523098721');
-
-  const exists = senderList.some(s => s.username === savedSender);
-  if (!exists && savedSender) {
-    const opt = document.createElement('option');
-    opt.value = savedSender;
-    opt.textContent = `${savedSender} (Khusus Template)`;
-    select.appendChild(opt);
+  if (!templateId) {
+    select.innerHTML = '<option value="">-- Pilih Template Terlebih Dahulu --</option>';
+    select.disabled = true;
+    hiddenInput.value = '';
+    return;
   }
 
-  select.value = savedSender;
-  hiddenInput.value = savedSender;
+  const activeTpl = voucherTemplates.find(item => item.id === templateId);
+  if (!activeTpl) {
+    select.innerHTML = '<option value="">-- Template Tidak Ditemukan --</option>';
+    select.disabled = true;
+    hiddenInput.value = '';
+    return;
+  }
+
+  const usernames = Array.isArray(activeTpl.allowed_usernames) && activeTpl.allowed_usernames.length > 0
+    ? activeTpl.allowed_usernames
+    : (activeTpl.default_sender ? [activeTpl.default_sender] : []);
+
+  if (usernames.length === 0) {
+    select.innerHTML = '<option value="">(Belum ada username untuk template ini)</option>';
+    select.disabled = true;
+    hiddenInput.value = '';
+    return;
+  }
+
+  select.disabled = false;
+  usernames.forEach(u => {
+    const opt = document.createElement('option');
+    opt.value = u;
+    opt.textContent = u;
+    select.appendChild(opt);
+  });
+
+  // Tentukan username terpilih (prioritaskan default_sender jika ada di list)
+  const defaultUser = (activeTpl.default_sender && usernames.includes(activeTpl.default_sender))
+    ? activeTpl.default_sender
+    : usernames[0];
+
+  select.value = defaultUser;
+  hiddenInput.value = defaultUser;
 }
 
 function handleSenderChange(val) {
-  document.getElementById('usernameInput').value = val;
-  saveSenderForCurrentTemplate(val);
+  const hiddenInput = document.getElementById('usernameInput');
+  if (hiddenInput) hiddenInput.value = val;
 }
 
-function saveSenderForCurrentTemplate(val) {
-  const storageKey = currentVoucherTemplateId 
-    ? `redeem_sender_tpl_${currentVoucherTemplateId}` 
-    : 'redeem_sender_global';
-  localStorage.setItem(storageKey, val);
-}
-
-function openSenderModal() {
-  const modal = document.getElementById('senderModal');
-  modal.classList.remove('hidden');
-  renderSenderTable();
-}
-
-function closeSenderModal() {
-  const modal = document.getElementById('senderModal');
-  modal.classList.add('hidden');
-}
-
-function renderSenderTable() {
-  const tbody = document.getElementById('senderListTableBody');
-  if (!senderList || senderList.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="3" style="text-align:center; padding:14px; color:var(--muted);">Belum ada nomor pengirim.</td></tr>`;
-    return;
-  }
-
-  tbody.innerHTML = senderList.map(s => `
-    <tr style="border-bottom: 1px solid var(--border);">
-      <td style="padding: 8px 12px; font-family: monospace; font-weight:600;">${s.username}</td>
-      <td style="padding: 8px 12px; color: #475569;">${s.label || '-'}</td>
-      <td style="padding: 8px 12px; text-align: right;">
-        <button type="button" class="text-button danger" onclick="deleteSender(${s.id})" style="font-size:12px; cursor:pointer;" title="Hapus">
-          🗑️
-        </button>
-      </td>
-    </tr>
-  `).join('');
-}
-
-async function handleAddNewSender(e) {
-  e.preventDefault();
-  const username = document.getElementById('newSenderUsername').value.trim();
-  const label = document.getElementById('newSenderLabel').value.trim();
-
-  if (!username) {
-    alert('Nomor pengirim wajib diisi!');
-    return;
-  }
-
-  try {
-    const res = await fetch('redeem_api.php?action=add_sender', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, label })
-    });
-    const json = await res.json();
-    if (json.status === 'success') {
-      document.getElementById('newSenderUsername').value = '';
-      document.getElementById('newSenderLabel').value = '';
-      await fetchSenders();
-      renderSenderTable();
-      // Pilih nomor baru ini secara otomatis
-      document.getElementById('usernameSelect').value = username;
-      handleSenderChange(username);
-    } else {
-      alert(json.message || 'Gagal menyimpan nomor');
-    }
-  } catch (err) {
-    alert('Error: ' + err.message);
+// Handler nomor tujuan yang dimasukkan oleh user
+function handleTujuanInput(val) {
+  const badgeEl = document.getElementById('activeTargetBadge');
+  if (badgeEl) {
+    const clean = (val || '').trim();
+    badgeEl.textContent = clean ? 'Tujuan: ' + clean : 'Tujuan: (Belum diisi)';
+    badgeEl.style.color = clean ? 'var(--primary)' : 'var(--muted)';
   }
 }
 
-async function deleteSender(id) {
-  if (!confirm('Hapus nomor pengirim ini dari dropdown?')) return;
-  try {
-    await fetch('redeem_api.php?action=delete_sender', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id })
-    });
-    await fetchSenders();
-    renderSenderTable();
-  } catch (err) {
-    alert('Error menghapus: ' + err.message);
-  }
-}
-
-// LocalStorage Helper untuk simpan pengaturan pengirim & tujuan
+// Inisialisasi: nomor tujuan selalu kosong secara default sesuai permintaan user
 function loadSavedConfig() {
-  const savedTujuan = localStorage.getItem('redeem_tujuan');
-
-  if (savedTujuan) {
-    const tujuanEl = document.getElementById('tujuanInput');
-    const badgeEl = document.getElementById('activeTargetBadge');
-    if (tujuanEl) tujuanEl.value = savedTujuan;
-    if (badgeEl) badgeEl.textContent = 'Tujuan: ' + savedTujuan;
-  }
+  const tujuanEl = document.getElementById('tujuanInput');
+  const badgeEl = document.getElementById('activeTargetBadge');
+  if (tujuanEl) tujuanEl.value = '';
+  if (badgeEl) badgeEl.textContent = 'Tujuan: (Belum diisi)';
 }
 
 function saveConfigToStorage() {
-  const userEl = document.getElementById('usernameInput');
-  const tujuanEl = document.getElementById('tujuanInput');
-  const user = userEl ? userEl.value.trim() : '';
-  const tujuan = tujuanEl ? tujuanEl.value.trim() : '';
-
-  localStorage.setItem('redeem_username', user);
-  localStorage.setItem('redeem_tujuan', tujuan);
-
-  const badgeEl = document.getElementById('activeTargetBadge');
-  if (badgeEl) badgeEl.textContent = 'Tujuan: ' + (tujuan || '-');
+  // Disimpan jika diperlukan untuk sesi aktif
 }
-
-document.getElementById('tujuanInput').addEventListener('input', function() {
-  saveConfigToStorage();
-});
 
 // Banner Alert Controller (Hijau = Sukses, Merah = Gagal, Kuning = Fallback)
 function showRedeemBanner(status, message) {
@@ -690,6 +537,17 @@ async function handleRedeemSubmit(e) {
   const username = document.getElementById('usernameInput').value.trim();
   const tujuan = document.getElementById('tujuanInput').value.trim();
   const voucher = document.getElementById('voucherInput').value.trim();
+
+  if (!username) {
+    alert('Template ini belum memiliki username/pengirim yang diatur admin. Silakan atur di Voucher Settings!');
+    return;
+  }
+
+  if (!tujuan) {
+    alert('Nomor tujuan tidak boleh kosong! Silakan masukkan nomor tujuan atau pilih dari template.');
+    document.getElementById('tujuanInput').focus();
+    return;
+  }
 
   if (!voucher) {
     alert('Silakan masukkan nomor voucher!');
@@ -969,45 +827,91 @@ function copyResultOutput() {
   });
 }
 
-function exportRedeemHistory() {
-  if (historyData.length === 0) {
-    alert('Belum ada data untuk diekspor!');
+function exportRedeemHistoryXlsx() {
+  if (!historyData || historyData.length === 0) {
+    alert('Belum ada data riwayat untuk didownload!');
     return;
   }
 
-  const csvRows = [
-    ['Waktu', 'Template', 'TRX_No', 'Nomor_Voucher', 'Nomor_Tujuan', 'Pengirim', 'Status', 'Saldo', 'Pesan_Keterangan']
+  if (typeof XLSX === 'undefined') {
+    alert('Library Excel (XLSX) sedang dimuat, silakan coba beberapa detik lagi.');
+    return;
+  }
+
+  const headers = [
+    'Waktu',
+    'Template',
+    'No TRX',
+    'Nomor Voucher',
+    'Nomor Tujuan',
+    'Nomor Pengirim',
+    'Status',
+    'Saldo',
+    'Pesan Keterangan'
   ];
 
+  const rows = [headers];
+
   historyData.forEach(item => {
-    csvRows.push([
-      `"${item.created_at || ''}"`,
-      `"${item.template_name || item.template_id || ''}"`,
-      `"${item.trx_no || ''}"`,
-      `"${item.voucher || ''}"`,
-      `"${item.tujuan || ''}"`,
-      `"${item.pengirim || ''}"`,
-      `"${item.status || ''}"`,
-      `"${item.saldo || ''}"`,
-      `"${(item.message || '').replace(/"/g, '""')}"`
+    rows.push([
+      String(item.created_at || ''),
+      String(item.template_name || item.template_id || ''),
+      String(item.trx_no || ''),
+      String(item.voucher || ''),
+      String(item.tujuan || ''),
+      String(item.pengirim || ''),
+      String(item.status || ''),
+      String(item.saldo || ''),
+      String(item.message || '')
     ]);
   });
 
-  const csvContent = "data:text/csv;charset=utf-8," + csvRows.map(e => e.join(",")).join("\n");
-  const encodedUri = encodeURI(csvContent);
-  const link = document.createElement("a");
-  link.setAttribute("href", encodedUri);
-  link.setAttribute("download", `redeem_tri_history_${new Date().toISOString().slice(0, 10)}.csv`);
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+
+  // Pastikan tipe cell untuk TRX, Voucher, Tujuan, Pengirim diset sebagai string ('s')
+  // agar Excel tidak mengubahnya menjadi notasi ilmiah (e.g. 8.6E+15) atau menghilangkan angka 0 di depan
+  const range = XLSX.utils.decode_range(ws['!ref'] || 'A1:I1');
+  for (let R = range.s.r + 1; R <= range.e.r; ++R) {
+    for (let C = range.s.c; C <= range.e.c; ++C) {
+      const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
+      const cell = ws[cellAddress];
+      if (cell) {
+        // C=2 (No TRX), C=3 (Nomor Voucher), C=4 (Nomor Tujuan), C=5 (Nomor Pengirim)
+        if (C === 2 || C === 3 || C === 4 || C === 5) {
+          cell.t = 's';
+          cell.z = '@';
+        }
+      }
+    }
+  }
+
+  // Hitung lebar kolom otomatis yang aman tanpa call stack error
+  const colWidths = headers.map((h, colIdx) => {
+    let maxLen = h.length;
+    for (let r = 0; r < rows.length; r++) {
+      const val = rows[r][colIdx] ? String(rows[r][colIdx]) : '';
+      if (val.length > maxLen) {
+        maxLen = val.length;
+      }
+    }
+    return { wch: Math.min(Math.max(maxLen + 3, 12), 50) };
+  });
+  ws['!cols'] = colWidths;
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Riwayat Redeem');
+
+  const fileName = `riwayat_redeem_${new Date().toISOString().slice(0, 10)}.xlsx`;
+  XLSX.writeFile(wb, fileName);
 }
+
+// Alias untuk kompatibilitas jika dipanggil dari tempat lain
+window.exportRedeemHistory = exportRedeemHistoryXlsx;
 
 // Inisialisasi halaman saat dibuka
 document.addEventListener('DOMContentLoaded', () => {
   fetchVoucherTemplates();
   loadSavedConfig();
-  fetchSenders();
 
   const sec = document.getElementById('configSection');
   if (sec) sec.style.display = 'none';

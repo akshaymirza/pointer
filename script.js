@@ -1442,22 +1442,42 @@ function downloadBulkXlsx() {
   const rows = bulkResultsData.map((item) => {
     const rowObj = { "#": item.index };
     bulkTargetParams.forEach((p) => {
-      rowObj[labelFor(p)] = item.params?.[p] ?? "";
+      rowObj[labelFor(p)] = String(item.params?.[p] ?? "");
     });
-    rowObj["Status"] = item.status;
-    rowObj["Generated Output"] = item.output || "";
+    rowObj["Status"] = String(item.status || "");
+    rowObj["Generated Output"] = String(item.output || "");
     return rowObj;
   });
 
-  const ws = XLSX.utils.json_to_sheet(rows, { header: headers });
+  const ws = XLSX.utils.json_to_sheet(rows, { header: headers, raw: true });
 
-  // Auto-width kolom
-  const colWidths = headers.map((h) => ({
-    wch: Math.max(
-      h.length,
-      ...rows.map((r) => String(r[h] ?? "").length)
-    )
-  }));
+  // Format kolom parameter, status, dan output sebagai text/string ('s')
+  // agar nomor voucher atau no HP tidak diubah menjadi notasi ilmiah atau kehilangan angka 0 di depan
+  const range = XLSX.utils.decode_range(ws["!ref"] || "A1:A1");
+  for (let R = range.s.r + 1; R <= range.e.r; ++R) {
+    for (let C = range.s.c; C <= range.e.c; ++C) {
+      if (C > 0) { // Selain kolom index '#'
+        const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
+        const cell = ws[cellAddress];
+        if (cell) {
+          cell.t = "s";
+          cell.z = "@";
+        }
+      }
+    }
+  }
+
+  // Auto-width kolom yang aman untuk jumlah baris banyak
+  const colWidths = headers.map((h) => {
+    let maxLen = h.length;
+    for (let r = 0; r < rows.length; r++) {
+      const val = rows[r][h] != null ? String(rows[r][h]) : "";
+      if (val.length > maxLen) {
+        maxLen = val.length;
+      }
+    }
+    return { wch: Math.min(Math.max(maxLen + 3, 10), 60) };
+  });
   ws["!cols"] = colWidths;
 
   const wb = XLSX.utils.book_new();
