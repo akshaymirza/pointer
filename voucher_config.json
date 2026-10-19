@@ -1,0 +1,18 @@
+{
+    "templates": [
+        {
+            "id": "vt-tri-direct",
+            "name": "Three (Tri) Voucher Check",
+            "description": "Pengecekan status voucher Three langsung ke server API/Web.",
+            "base_target_url": "https://example.com/check-voucher?voucher={voucher}",
+            "default_sender": "089523098721",
+            "success_keyword": "SUKSES",
+            "success_custom_message": "Voucher Tri berhasil divalidasi dan aktif.",
+            "failed_keyword": "GAGAL",
+            "failed_custom_message": "Voucher Tri tidak valid atau sudah kadaluarsa.",
+            "is_default": true,
+            "updated_at": "2026-10-14 21:53:21"
+        }
+    ],
+    "updated_at": "2026-10-15 14:40:27"
+}

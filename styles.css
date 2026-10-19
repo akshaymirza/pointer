@@ -64,9 +64,17 @@ button {
 .brand {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 12px;
   padding: 0 6px 24px;
   border-bottom: 1px solid var(--border);
+}
+
+.brand-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
 }
 
 .brand-mark,
@@ -110,10 +118,92 @@ small {
   font-size: 12px;
 }
 
-.sidebar.collapsed .brand div:last-child,
+/* Tombol close sidebar — ghost button minimalis, senada dengan icon-button lain */
+.close-sidebar-btn {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: #f1f5f9;
+  color: #64748b;
+  line-height: 1;
+  cursor: pointer;
+  flex-shrink: 0;
+  padding: 0;
+  transition: background-color 0.18s ease, color 0.18s ease, border-color 0.18s ease, transform 0.12s ease;
+}
+
+.close-sidebar-btn svg {
+  width: 16px;
+  height: 16px;
+  stroke: currentColor;
+}
+
+.close-sidebar-btn:hover {
+  background: #fef2f2;
+  color: var(--danger);
+  border-color: #fecaca;
+}
+
+.close-sidebar-btn:active {
+  transform: scale(0.94);
+}
+
+.close-sidebar-btn:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/* Tombol expand saat sidebar diciutkan (desktop) — muncul menempel di tepi kanan sidebar */
+.expand-sidebar-btn {
+  position: absolute;
+  top: 28px;
+  right: -13px;
+  z-index: 25;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: white;
+  color: var(--primary);
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.12);
+  cursor: pointer;
+  padding: 0;
+  transition: background-color 0.18s ease, transform 0.15s ease;
+}
+
+.expand-sidebar-btn svg {
+  width: 14px;
+  height: 14px;
+  stroke: currentColor;
+}
+
+.expand-sidebar-btn:hover {
+  background: #eff6ff;
+  transform: scale(1.08);
+}
+
+.sidebar.collapsed .expand-sidebar-btn {
+  display: inline-flex;
+}
+
+/* Hanya tampil jika sidebar TIDAK collapsed (pada desktop) */
+.sidebar:not(.collapsed) .close-sidebar-btn {
+  display: inline-flex;
+}
+
+/* Sembunyikan elemen saat sidebar ciut/collapsed */
+.sidebar.collapsed .brand-info,
+.sidebar.collapsed .close-sidebar-btn,
 .sidebar.collapsed .nav-item span:last-child,
 .sidebar.collapsed .sidebar-footer span:last-child {
-  display: none;
+  display: none !important;
 }
 
 .nav-list {
@@ -123,6 +213,7 @@ small {
 }
 
 .nav-item {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -134,12 +225,36 @@ small {
   color: #334155;
   padding: 0 12px;
   text-align: left;
+  text-decoration: none;
+  transition: background-color 0.16s ease, color 0.16s ease;
 }
 
 .nav-item:hover,
 .nav-item.active {
   background: #eff6ff;
   color: var(--primary);
+}
+
+.nav-item.active::before {
+  content: "";
+  position: absolute;
+  left: -18px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 22px;
+  border-radius: 0 4px 4px 0;
+  background: var(--primary);
+}
+
+.nav-item .icon {
+  border-radius: 10px;
+  transition: background-color 0.16s ease;
+}
+
+.nav-item:hover .icon,
+.nav-item.active .icon {
+  background: #dbeafe;
 }
 
 .icon {
@@ -502,6 +617,18 @@ em {
   min-height: 240px;
 }
 
+#generatedOutput {
+  min-height: 220px;
+  height: auto;
+  overflow-y: hidden;
+  line-height: 1.6;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 13px;
+  white-space: pre-wrap;
+  word-break: break-all;
+  transition: height 0.15s ease;
+}
+
 .form-actions {
   display: flex;
   justify-content: flex-end;
@@ -705,10 +832,16 @@ em {
     width: 280px;
   }
 
-  .sidebar.collapsed .brand div:last-child,
-  .sidebar.collapsed .nav-item span:last-child,
-  .sidebar.collapsed .sidebar-footer span:last-child {
-    display: block;
+  .sidebar:not(.open) .close-sidebar-btn {
+    display: none !important;
+  }
+
+  .sidebar.open .close-sidebar-btn {
+    display: inline-flex !important;
+  }
+
+  .expand-sidebar-btn {
+    display: none !important;
   }
 
   .main {
@@ -766,4 +899,283 @@ em {
   .content-card {
     padding: 18px;
   }
+}
+
+/* Auth & Login System Styling */
+.login-body {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  padding: 20px;
+}
+
+.login-wrapper {
+  width: 100%;
+  max-width: 440px;
+}
+
+.login-card {
+  background: #ffffff;
+  border-radius: 20px;
+  padding: 36px 30px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+}
+
+.login-header {
+  text-align: center;
+  margin-bottom: 28px;
+}
+
+.brand-mark.large {
+  width: 56px;
+  height: 56px;
+  font-size: 24px;
+  border-radius: 16px;
+  margin: 0 auto 12px;
+}
+
+.login-header h2 {
+  margin: 0;
+  font-size: 22px;
+  color: #0f172a;
+}
+
+.login-header p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.login-form {
+  display: grid;
+  gap: 18px;
+}
+
+.form-group {
+  display: grid;
+  gap: 6px;
+}
+
+.form-group label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #334155;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.form-group input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+.login-btn {
+  width: 100%;
+  padding: 12px;
+  margin-top: 6px;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.alert {
+  padding: 12px 16px;
+  border-radius: 12px;
+  font-size: 14px;
+  margin-bottom: 18px;
+}
+
+.alert-danger {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #dc2626;
+}
+
+.alert-success {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #16a34a;
+}
+
+.login-demo-info {
+  margin-top: 24px;
+  padding: 14px;
+  background: #f8fafc;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  font-size: 12px;
+  color: #475569;
+}
+
+.login-demo-info p {
+  margin: 0 0 6px;
+}
+
+.login-demo-info ul {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.login-demo-info li {
+  margin-bottom: 4px;
+}
+
+/* Mode Tabs */
+.mode-tabs {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 12px;
+}
+
+.mode-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: white;
+  color: var(--muted);
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.mode-tab:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.mode-tab.active {
+  background: #eff6ff;
+  border-color: var(--primary);
+  color: var(--primary);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.12);
+}
+
+/* Param Header & Sort Select */
+.param-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.param-sort-select {
+  width: auto !important;
+  height: 28px !important;
+  padding: 2px 8px !important;
+  font-size: 12px !important;
+  border-radius: 8px !important;
+  background: #f8fafc !important;
+  color: var(--muted) !important;
+  font-weight: 600 !important;
+}
+
+.param-sort-select:hover {
+  border-color: var(--primary) !important;
+  color: var(--primary) !important;
+}
+
+/* Bulk Table styling */
+#bulkResultTable th {
+  background: #f8fafc;
+  position: sticky;
+  top: 0;
+}
+
+#bulkResultTable td {
+  vertical-align: top;
+}
+
+.bulk-output-cell {
+  height: auto;
+  overflow: visible;
+  font-family: monospace;
+  font-size: 12px;
+  background: #f8fafc;
+  padding: 8px 10px;
+  border-radius: 8px;
+  white-space: pre-wrap;
+  word-break: break-all;
+  line-height: 1.5;
+}
+
+/* ── Bulk Multi-Parameter UI ── */
+.bulk-param-checklist {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.bulk-param-check-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: white;
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.16s ease;
+  font-weight: 600;
+  font-size: 14px;
+  user-select: none;
+}
+
+.bulk-param-check-item:hover {
+  border-color: var(--primary);
+  background: #f8fafc;
+}
+
+.bulk-param-check-item.active {
+  border-color: var(--primary);
+  background: #eff6ff;
+  color: var(--primary-dark);
+}
+
+.bulk-param-check-item input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--primary);
+  cursor: pointer;
+}
+
+.bulk-param-config-card {
+  background: white;
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--primary);
+  border-radius: 12px;
+  padding: 14px 16px;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04);
+}
+
+.bulk-param-config-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.bulk-param-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  background: #eff6ff;
+  color: var(--primary);
+  border-radius: 6px;
+  font-size: 11px;
+  font-family: monospace;
+  font-weight: 700;
 }

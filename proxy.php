@@ -35,12 +35,16 @@ if ($method === 'POST' && !empty($body)) {
     curl_setopt($ch, CURLOPT_POSTFIELDS, $body);
 }
 
+curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
+curl_setopt($ch, CURLOPT_TIMEOUT, 15);
+
 $response = curl_exec($ch);
 $httpcode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 
 if (curl_errno($ch)) {
     http_response_code(500);
-    echo json_encode(["error" => "Curl error: " . curl_error($ch)]);
+    header('Content-Type: application/json');
+    echo json_encode(["error" => "cURL error (" . curl_errno($ch) . "): " . curl_error($ch)]);
 } else {
     // Determine content type
     $contentType = curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
