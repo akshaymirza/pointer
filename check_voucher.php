@@ -122,7 +122,13 @@ if ($action === 'add_target_number') {
  */
 $voucher = $_GET['voucher'] ?? ($jsonBody['voucher'] ?? ($_POST['voucher'] ?? ''));
 $templateId = $_GET['template_id'] ?? ($jsonBody['template_id'] ?? ($_POST['template_id'] ?? null));
+$username = $_GET['username'] ?? ($jsonBody['username'] ?? ($_POST['username'] ?? ''));
+$tujuan = $_GET['tujuan'] ?? ($jsonBody['tujuan'] ?? ($_POST['tujuan'] ?? ''));
+$trxId = $_GET['trx_id'] ?? ($jsonBody['trx_id'] ?? ($_POST['trx_id'] ?? ''));
 $voucher = trim($voucher);
+$username = trim($username);
+$tujuan = trim($tujuan);
+$trxId = trim($trxId);
 
 if ($voucher === '') {
     http_response_code(400);
@@ -146,13 +152,52 @@ if (empty($baseUrl)) {
     exit;
 }
 
-// 2. Gabungkan URL target dengan parameter voucher
-// Jika ada placeholder {voucher}, ganti. Jika tidak, tambahkan sebagai query parameter.
-if (strpos($baseUrl, '{voucher}') !== false) {
-    $targetUrl = str_replace('{voucher}', urlencode($voucher), $baseUrl);
+// Fallback username jika tidak dikirim dari front-end
+if ($username === '') {
+    $username = trim($config['default_sender'] ?? '');
+    if ($username === '' && !empty($config['allowed_usernames']) && is_array($config['allowed_usernames'])) {
+        $username = trim($config['allowed_usernames'][0] ?? '');
+    }
+}
+
+// 2. Gabungkan URL target dengan parameter tetap voucher & username, serta tujuan
+$targetUrl = $baseUrl;
+
+// Ganti parameter tetap {voucher}
+if (strpos($targetUrl, '{voucher}') !== false) {
+    $targetUrl = str_replace('{voucher}', urlencode($voucher), $targetUrl);
 } else {
-    $separator = (strpos($baseUrl, '?') !== false) ? '&' : '?';
-    $targetUrl = $baseUrl . $separator . 'voucher=' . urlencode($voucher);
+    $separator = (strpos($targetUrl, '?') !== false) ? '&' : '?';
+    $targetUrl = $targetUrl . $separator . 'voucher=' . urlencode($voucher);
+}
+
+// Ganti parameter tetap {username}
+if (strpos($targetUrl, '{username}') !== false) {
+    $targetUrl = str_replace('{username}', urlencode($username), $targetUrl);
+} elseif (strpos($targetUrl, '{user}') !== false) {
+    $targetUrl = str_replace('{user}', urlencode($username), $targetUrl);
+} elseif (strpos($targetUrl, '{pengirim}') !== false) {
+    $targetUrl = str_replace('{pengirim}', urlencode($username), $targetUrl);
+}
+
+// Ganti {tujuan} jika ada placeholder
+if (strpos($targetUrl, '{tujuan}') !== false) {
+    $targetUrl = str_replace('{tujuan}', urlencode($tujuan), $targetUrl);
+} elseif (strpos($targetUrl, '{target}') !== false) {
+    $targetUrl = str_replace('{target}', urlencode($tujuan), $targetUrl);
+}
+
+// Ganti variable ID Transaksi (jika dikonfigurasikan pada template)
+$trxIdVariable = trim($config['trx_id_variable'] ?? '');
+if ($trxIdVariable !== '' && $trxId !== '') {
+    if (strpos($targetUrl, '{' . $trxIdVariable . '}') !== false) {
+        $targetUrl = str_replace('{' . $trxIdVariable . '}', urlencode($trxId), $targetUrl);
+    } elseif (preg_match('/([?&]' . preg_quote($trxIdVariable, '/') . '=)[^&]*/i', $targetUrl)) {
+        $targetUrl = preg_replace('/([?&]' . preg_quote($trxIdVariable, '/') . '=)[^&]*/i', '${1}' . urlencode($trxId), $targetUrl);
+    } else {
+        $separator = (strpos($targetUrl, '?') !== false) ? '&' : '?';
+        $targetUrl .= $separator . urlencode($trxIdVariable) . '=' . urlencode($trxId);
+    }
 }
 
 // 3. HTTP Fetch ke URL target di latar belakang menggunakan cURL
@@ -252,6 +297,9 @@ echo json_encode([
     'template_id' => $config['id'] ?? null,
     'template_name' => $config['name'] ?? null,
     'voucher' => $voucher,
+    'username' => $username,
+    'tujuan' => $tujuan,
+    'trx_id' => $trxId,
     'http_code' => $httpCode,
     'target_url' => $targetUrl,
     'matched_keywords' => [

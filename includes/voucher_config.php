@@ -27,7 +27,7 @@ function getDefaultVoucherTemplates() {
             'id' => 'vt-tri-direct',
             'name' => 'Three (Tri) Voucher Check',
             'description' => 'Pengecekan status voucher Three langsung ke server API/Web.',
-            'base_target_url' => 'https://example.com/check-voucher?voucher={voucher}',
+            'base_target_url' => 'https://example.com/check-voucher?username={username}&voucher={voucher}',
             'default_sender' => '089523098721',
             'allowed_usernames' => ['089523098721'],
             'target_numbers' => ['0895639154834'],
@@ -85,12 +85,21 @@ function ensureVoucherTemplatesTable($pdo) {
             `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
 
-        // Pastikan kolom pending_keyword, pending_custom_message, default_sender, allowed_usernames & target_numbers ada jika tabel sudah terlanjur dibuat
+        // Pastikan kolom pending_keyword, pending_custom_message, default_sender, allowed_usernames, target_numbers & trx_id ada jika tabel sudah terlanjur dibuat
         try {
             $pdo->exec("ALTER TABLE `voucher_templates` ADD COLUMN `default_sender` VARCHAR(50) NULL AFTER `base_target_url`");
         } catch (Exception $eCol) {}
         try {
-            $pdo->exec("ALTER TABLE `voucher_templates` ADD COLUMN `allowed_usernames` TEXT NULL AFTER `default_sender`");
+            $pdo->exec("ALTER TABLE `voucher_templates` ADD COLUMN `trx_id_variable` VARCHAR(50) NULL AFTER `default_sender`");
+        } catch (Exception $eCol) {}
+        try {
+            $pdo->exec("ALTER TABLE `voucher_templates` ADD COLUMN `trx_id_prefix` VARCHAR(50) NULL AFTER `trx_id_variable`");
+        } catch (Exception $eCol) {}
+        try {
+            $pdo->exec("ALTER TABLE `voucher_templates` ADD COLUMN `trx_id_last_number` INT NOT NULL DEFAULT 1000 AFTER `trx_id_prefix`");
+        } catch (Exception $eCol) {}
+        try {
+            $pdo->exec("ALTER TABLE `voucher_templates` ADD COLUMN `allowed_usernames` TEXT NULL AFTER `trx_id_last_number`");
         } catch (Exception $eCol) {}
         try {
             $pdo->exec("ALTER TABLE `voucher_templates` ADD COLUMN `target_numbers` TEXT NULL AFTER `allowed_usernames`");
@@ -156,6 +165,9 @@ function getAllVoucherTemplates() {
                         'name' => $r['name'],
                         'description' => $r['description'] ?? '',
                         'base_target_url' => $r['base_target_url'],
+                        'trx_id_variable' => $r['trx_id_variable'] ?? '',
+                        'trx_id_prefix' => $r['trx_id_prefix'] ?? '',
+                        'trx_id_last_number' => isset($r['trx_id_last_number']) ? intval($r['trx_id_last_number']) : 1000,
                         'default_sender' => $r['default_sender'] ?? '',
                         'allowed_usernames' => $allowedUsernames,
                         'target_numbers' => $targetNumbers,
@@ -188,6 +200,9 @@ function getAllVoucherTemplates() {
                     }
                     $t['allowed_usernames'] = $allowed;
                     $t['target_numbers'] = parseItemsList($t['target_numbers'] ?? []);
+                    $t['trx_id_variable'] = $t['trx_id_variable'] ?? '';
+                    $t['trx_id_prefix'] = $t['trx_id_prefix'] ?? '';
+                    $t['trx_id_last_number'] = isset($t['trx_id_last_number']) ? intval($t['trx_id_last_number']) : 1000;
                     return $t;
                 }, $data['templates']);
             } elseif (is_array($data) && isset($data['base_target_url'])) {
@@ -254,6 +269,9 @@ function saveVoucherTemplate(array $item) {
     $description = trim($item['description'] ?? '');
     $baseTargetUrl = trim($item['base_target_url'] ?? '');
     $defaultSender = trim($item['default_sender'] ?? '');
+    $trxIdVariable = trim($item['trx_id_variable'] ?? '');
+    $trxIdPrefix = trim($item['trx_id_prefix'] ?? '');
+    $trxIdLastNumber = isset($item['trx_id_last_number']) ? intval($item['trx_id_last_number']) : 1000;
     $allowedUsernames = parseItemsList($item['allowed_usernames'] ?? []);
     $targetNumbers = parseItemsList($item['target_numbers'] ?? []);
 
@@ -278,6 +296,9 @@ function saveVoucherTemplate(array $item) {
         'name' => $name,
         'description' => $description,
         'base_target_url' => $baseTargetUrl,
+        'trx_id_variable' => $trxIdVariable,
+        'trx_id_prefix' => $trxIdPrefix,
+        'trx_id_last_number' => $trxIdLastNumber,
         'default_sender' => $defaultSender,
         'allowed_usernames' => $allowedUsernames,
         'target_numbers' => $targetNumbers,
@@ -303,12 +324,15 @@ function saveVoucherTemplate(array $item) {
             }
 
             $stmt = $pdo->prepare("INSERT INTO `voucher_templates` 
-                (`id`, `name`, `description`, `base_target_url`, `default_sender`, `allowed_usernames`, `target_numbers`, `success_keyword`, `success_custom_message`, `pending_keyword`, `pending_custom_message`, `failed_keyword`, `failed_custom_message`, `is_default`, `updated_at`)
-                VALUES (:id, :name, :description, :base_target_url, :default_sender, :allowed_usernames, :target_numbers, :success_keyword, :success_custom_message, :pending_keyword, :pending_custom_message, :failed_keyword, :failed_custom_message, :is_default, NOW())
+                (`id`, `name`, `description`, `base_target_url`, `trx_id_variable`, `trx_id_prefix`, `trx_id_last_number`, `default_sender`, `allowed_usernames`, `target_numbers`, `success_keyword`, `success_custom_message`, `pending_keyword`, `pending_custom_message`, `failed_keyword`, `failed_custom_message`, `is_default`, `updated_at`)
+                VALUES (:id, :name, :description, :base_target_url, :trx_id_variable, :trx_id_prefix, :trx_id_last_number, :default_sender, :allowed_usernames, :target_numbers, :success_keyword, :success_custom_message, :pending_keyword, :pending_custom_message, :failed_keyword, :failed_custom_message, :is_default, NOW())
                 ON DUPLICATE KEY UPDATE
                     `name` = VALUES(`name`),
                     `description` = VALUES(`description`),
                     `base_target_url` = VALUES(`base_target_url`),
+                    `trx_id_variable` = VALUES(`trx_id_variable`),
+                    `trx_id_prefix` = VALUES(`trx_id_prefix`),
+                    `trx_id_last_number` = VALUES(`trx_id_last_number`),
                     `default_sender` = VALUES(`default_sender`),
                     `allowed_usernames` = VALUES(`allowed_usernames`),
                     `target_numbers` = VALUES(`target_numbers`),
@@ -326,6 +350,9 @@ function saveVoucherTemplate(array $item) {
                 ':name' => $name,
                 ':description' => $description,
                 ':base_target_url' => $baseTargetUrl,
+                ':trx_id_variable' => $trxIdVariable,
+                ':trx_id_prefix' => $trxIdPrefix,
+                ':trx_id_last_number' => $trxIdLastNumber,
                 ':default_sender' => $defaultSender,
                 ':allowed_usernames' => json_encode($allowedUsernames),
                 ':target_numbers' => json_encode($targetNumbers),

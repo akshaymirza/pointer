@@ -4,23 +4,42 @@
             "id": "vt-tri-direct",
             "name": "Three (Tri) Voucher Check",
             "description": "Pengecekan status voucher Three langsung ke server API/Web.",
-            "base_target_url": "https://example.com/check-voucher?voucher={voucher}",
-            "default_sender": "089523098721",
-            "allowed_usernames": [
-                "089523098721"
-            ],
-            "target_numbers": [
-                "0895639154834"
-            ],
+            "base_target_url": "https://example.com/check-voucher?voucher={vouche}",
+            "trx_id_variable": "voucher",
+            "trx_id_prefix": "rt",
+            "trx_id_last_number": 1000,
+            "default_sender": "",
+            "allowed_usernames": [],
+            "target_numbers": [],
             "success_keyword": "SUKSES",
             "success_custom_message": "Voucher Tri berhasil divalidasi dan aktif.",
-            "pending_keyword": "menunggu",
-            "pending_custom_message": "Voucher sedang dalam antrian / proses.",
+            "pending_keyword": "",
+            "pending_custom_message": "",
             "failed_keyword": "GAGAL",
             "failed_custom_message": "Voucher Tri tidak valid atau sudah kadaluarsa.",
             "is_default": 1,
-            "updated_at": "2026-10-19 11:44:09"
+            "updated_at": "2026-11-07 10:38:07"
+        },
+        {
+            "id": "vt-google-search-demo",
+            "name": "Google Search Demo Target",
+            "description": "Target demo pencarian web untuk pengujian respons.",
+            "base_target_url": "https://www.google.com/search?q=kenapa+gemini+pro+3.1+di+{voucher}",
+            "trx_id_variable": "",
+            "trx_id_prefix": "",
+            "trx_id_last_number": 1000,
+            "default_sender": "",
+            "allowed_usernames": [],
+            "target_numbers": [],
+            "success_keyword": "gemini",
+            "success_custom_message": "Kata kunci berhasil ditemukan pada halaman web!",
+            "pending_keyword": "menunggu",
+            "pending_custom_message": "Voucher sedang dalam antrian / proses.",
+            "failed_keyword": "tidak ditemukan",
+            "failed_custom_message": "Halaman tidak memuat informasi yang dicari.",
+            "is_default": 0,
+            "updated_at": "2026-11-07 17:35:18"
         }
     ],
-    "updated_at": "2026-10-19 11:44:09"
+    "updated_at": "2026-11-07 10:38:07"
 }

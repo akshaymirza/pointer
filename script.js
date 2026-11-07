@@ -28,6 +28,7 @@ const elements = {
   httpMethod: qs("#httpMethod"),
   apiUrl: qs("#apiUrl"),
   paramOptions: qs("#paramOptions"),
+  paramDefaultsContainer: qs("#paramDefaultsContainer"),
   inputTemplate: qs("#inputTemplate"),
   inputParameter: qs("#inputParameter"),
   sampleWebResponse: qs("#sampleWebResponse"),
@@ -163,24 +164,135 @@ function renderTemplateSelect() {
   renderDynamicForm();
 }
 
-function parseParamOptions(text) {
+function parseParamOptions(text, urlParams = []) {
   // Format tiap baris: nama_parameter: nilai1, nilai2, nilai3
+  // Atau baris per baris nomor/nilai (jika URL hanya memiliki 1 parameter atau tanpa colon)
   const map = {};
   if (!text) return map;
 
-  text.split("\n").forEach((line) => {
+  const lines = text
+    .split("\n")
+    .map((l) => l.trim())
+    .filter((l) => l.length > 0);
+  if (!lines.length) return map;
+
+  let hasColon = false;
+  lines.forEach((line) => {
     const idx = line.indexOf(":");
-    if (idx === -1) return;
-    const key = line.slice(0, idx).trim();
-    const values = line
-      .slice(idx + 1)
-      .split(",")
-      .map((v) => v.trim())
-      .filter((v) => v.length > 0);
-    if (key && values.length) map[key] = values;
+    if (idx !== -1) {
+      hasColon = true;
+      const key = line.slice(0, idx).trim();
+      const values = line
+        .slice(idx + 1)
+        .split(/[\r\n,]+/)
+        .map((v) => v.trim())
+        .filter((v) => v.length > 0);
+      if (key && values.length) {
+        map[key] = [...new Set(values)];
+      }
+    }
   });
 
+  if (!hasColon) {
+    const rawValues = text
+      .split(/[\r\n,]+/)
+      .map((v) => v.trim())
+      .filter((v) => v.length > 0);
+
+    if (rawValues.length > 0) {
+      const targetParam = (urlParams && urlParams.length === 1)
+        ? urlParams[0]
+        : (urlParams && urlParams[0] ? urlParams[0] : "param");
+      map[targetParam] = [...new Set(rawValues)];
+    }
+  }
+
   return map;
+}
+
+// Helper sinkronisasi dropdown Nilai Utama (Default Terpilih) di Editor Template
+function syncParamDefaultsDropdown(savedDefaults = null) {
+  const container = qs("#paramDefaultsContainer");
+  const paramOptionsEl = qs("#paramOptions");
+  const apiUrlEl = qs("#apiUrl");
+  if (!container || !paramOptionsEl) return;
+
+  const urlParams = extractParams(apiUrlEl ? apiUrlEl.value : "");
+  const optionsMap = parseParamOptions(paramOptionsEl.value, urlParams);
+  const paramKeys = Object.keys(optionsMap);
+
+  // Simpan nilai dropdown yang sedang aktif di DOM jika ada
+  const currentSelections = {};
+  container.querySelectorAll("select[data-default-param]").forEach((sel) => {
+    currentSelections[sel.dataset.defaultParam] = sel.value;
+  });
+
+  if (paramKeys.length === 0) {
+    container.innerHTML = `
+      <select id="paramDefaultFallback" disabled style="height: 46px; font-family: monospace; font-size: 14px; font-weight: 600; background: white;">
+        <option value="">-- Masukkan preset values di sebelah kiri dahulu --</option>
+      </select>
+    `;
+    return;
+  }
+
+  // Jika hanya ada 1 parameter yang memiliki preset
+  if (paramKeys.length === 1) {
+    const param = paramKeys[0];
+    const values = optionsMap[param];
+    const prevVal = (savedDefaults && savedDefaults[param]) || currentSelections[param];
+
+    const opts = values
+      .map((val) => `<option value="${escapeHtml(val)}">${escapeHtml(val)}</option>`)
+      .join("");
+
+    container.innerHTML = `
+      <select class="param-default-select" data-default-param="${escapeHtml(param)}" style="height: 46px; font-family: monospace; font-size: 14px; font-weight: 600; background: white;">
+        ${opts}
+      </select>
+    `;
+
+    const sel = container.querySelector(`select[data-default-param="${param}"]`);
+    if (sel) {
+      if (prevVal && values.includes(prevVal)) {
+        sel.value = prevVal;
+      } else {
+        sel.value = values[0];
+      }
+    }
+    return;
+  }
+
+  // Jika ada lebih dari 1 parameter
+  container.innerHTML = paramKeys
+    .map((param) => {
+      const values = optionsMap[param];
+      const opts = values
+        .map((val) => `<option value="${escapeHtml(val)}">${escapeHtml(val)}</option>`)
+        .join("");
+
+      return `
+        <div style="display: flex; flex-direction: column; gap: 4px;">
+          <span style="font-size: 12px; font-weight: 600; color: #1e40af;">Default {${escapeHtml(param)}}:</span>
+          <select class="param-default-select" data-default-param="${escapeHtml(param)}" style="height: 42px; font-family: monospace; font-size: 13px; font-weight: 600; background: white;">
+            ${opts}
+          </select>
+        </div>
+      `;
+    })
+    .join("");
+
+  paramKeys.forEach((param) => {
+    const sel = container.querySelector(`select[data-default-param="${param}"]`);
+    if (!sel) return;
+    const values = optionsMap[param];
+    const prevVal = (savedDefaults && savedDefaults[param]) || currentSelections[param];
+    if (prevVal && values.includes(prevVal)) {
+      sel.value = prevVal;
+    } else {
+      sel.value = values[0];
+    }
+  });
 }
 
 let currentMode = "single";
@@ -390,7 +502,12 @@ function renderDynamicForm() {
 
   const template = getSelectedTemplate();
   const params = extractParams(template?.apiUrl ?? "");
-  const optionsMap = parseParamOptions(template?.paramOptions ?? "");
+  const optionsMap = parseParamOptions(template?.paramOptions ?? "", params);
+  const defaultsMap = (typeof template?.paramDefaults === "object" && template?.paramDefaults !== null)
+    ? template.paramDefaults
+    : (typeof template?.paramDefaults === "string" && template.paramDefaults.startsWith("{"))
+      ? JSON.parse(template.paramDefaults || "{}")
+      : {};
   const CUSTOM_VALUE = "__custom__";
 
   renderBulkParamChecklist(params);
@@ -409,8 +526,15 @@ function renderDynamicForm() {
 
         if (options && options.length) {
           const sortedOptions = getSortedOptions(options, sortOrder);
+          const defaultVal = (defaultsMap[param] && options.includes(defaultsMap[param]))
+            ? defaultsMap[param]
+            : options[0];
+
           const optionTags = sortedOptions
-            .map((value) => `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`)
+            .map((value) => {
+              const isSelected = (value === defaultVal) ? "selected" : "";
+              return `<option value="${escapeHtml(value)}" ${isSelected}>${escapeHtml(value)}</option>`;
+            })
             .join("");
           return `
             <label>
@@ -518,6 +642,16 @@ function initEditorPage() {
   const urlParams = new URLSearchParams(window.location.search);
   const id = urlParams.get("id");
 
+  // Pasang event listener realtime untuk sinkronisasi dropdown default
+  const paramOptionsInput = qs("#paramOptions");
+  const apiUrlInput = qs("#apiUrl");
+  if (paramOptionsInput) {
+    paramOptionsInput.addEventListener("input", () => syncParamDefaultsDropdown());
+  }
+  if (apiUrlInput) {
+    apiUrlInput.addEventListener("input", () => syncParamDefaultsDropdown());
+  }
+
   if (id) {
     const template = templates.find((item) => item.id === id);
     if (template) {
@@ -535,12 +669,15 @@ function initEditorPage() {
       elements.inputParameter.value = template.inputParameter ?? "";
       elements.sampleWebResponse.value = template.sampleWebResponse ?? "";
       elements.outputTemplate.value = template.outputTemplate;
+
+      syncParamDefaultsDropdown(template.paramDefaults);
       return;
     }
   }
 
   editingId = null;
   if (elements.pageTitle) elements.pageTitle.textContent = "Create Template";
+  syncParamDefaultsDropdown();
 }
 
 async function saveTemplate(event) {
@@ -558,6 +695,15 @@ async function saveTemplate(event) {
   const sampleWebResponse = qs("#sampleWebResponse");
   const outputTemplate = qs("#outputTemplate");
 
+  // Kumpulkan default terpilih untuk masing-masing parameter
+  const paramDefaults = {};
+  qsa("#paramDefaultsContainer select[data-default-param]").forEach((sel) => {
+    const param = sel.dataset.defaultParam;
+    if (param && sel.value) {
+      paramDefaults[param] = sel.value;
+    }
+  });
+
   const payload = {
     id: editingId || (crypto.randomUUID ? crypto.randomUUID() : String(Date.now())),
     name: templateName ? templateName.value.trim() : "",
@@ -565,6 +711,7 @@ async function saveTemplate(event) {
     method: httpMethod ? httpMethod.value : "GET",
     apiUrl: apiUrl ? apiUrl.value.trim() : "",
     paramOptions: paramOptions ? paramOptions.value.trim() : "",
+    paramDefaults: paramDefaults,
     inputTemplate: inputTemplate ? inputTemplate.value.trim() : "",
     inputParameter: inputParameter ? inputParameter.value.trim() : "",
     sampleWebResponse: sampleWebResponse ? sampleWebResponse.value.trim() : "",

@@ -573,6 +573,7 @@ td {
   min-width: 0;
 }
 
+.two-col .wide-field,
 .parser-grid .wide-field {
   grid-column: 1 / -1;
 }

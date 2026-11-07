@@ -163,23 +163,86 @@ include 'includes/sidebar.php';
           <!-- 1. BASE TARGET URL -->
           <div style="background: #f8fafc; border: 1px solid var(--border); border-radius: 14px; padding: 18px; margin-bottom: 20px;">
             <label style="display: grid; gap: 8px;">
-              <div style="display: flex; justify-content: space-between; align-items: baseline;">
+              <div style="display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 8px;">
                 <span style="font-size: 15px; font-weight: 700; color: #1e293b;">1. Base Target URL *</span>
-                <span style="font-size: 12px; color: var(--primary); font-weight: 600; background: #eff6ff; padding: 2px 8px; border-radius: 6px;">
-                  Gunakan placeholder {voucher}
+                <span style="font-size: 12px; color: #1e40af; font-weight: 600; background: #eff6ff; padding: 2px 8px; border-radius: 6px;">
+                  Parameter Tetap: <code>{username}</code> & <code>{voucher}</code>
                 </span>
               </div>
               <input 
                 type="text" 
                 id="baseTargetUrl" 
                 name="base_target_url"
-                placeholder="Contoh: https://example.com/check-voucher?voucher={voucher}" 
+                placeholder="Contoh: https://example.com/check-voucher?username={username}&voucher={voucher}&idtrx={idtrx}" 
                 required
+                oninput="handleBaseTargetUrlInput()"
                 style="font-family: monospace; font-size: 13px; height: 48px;"
               />
-              <small style="color: var(--muted); font-size: 12px; line-height: 1.4;">
-                Link utama yang akan dieksekusi di latar belakang oleh Proxy. Parameter voucher akan ditempatkan di <code>{voucher}</code>.
+              <small style="color: var(--muted); font-size: 12px; line-height: 1.5;">
+                Link utama yang akan dieksekusi di latar belakang oleh Proxy.<br>
+                • <code>{username}</code>: Parameter tetap untuk username/nomor pengirim terpilih di Halaman Redeem.<br>
+                • <code>{voucher}</code>: Parameter tetap untuk nomor kode voucher yang diinput user.<br>
+                • <code>{tujuan}</code>: (Opsional) Parameter untuk nomor tujuan jika URL target membutuhkannya.<br>
+                • Parameter ID Transaksi (opsional): otomatis diisi nilai unik baru (contoh: <code>rt1001</code>) jika diaktifkan di bawah.
               </small>
+
+              <!-- PENGATURAN ID TRANSAKSI OTOMATIS PADA TARGET URL -->
+              <div style="margin-top: 14px; padding: 14px 16px; background: white; border: 1.5px solid #cbd5e1; border-radius: 12px;">
+                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px; font-weight: 600; color: #1e293b; margin-bottom: 0;">
+                  <input type="checkbox" id="enableTrxId" name="enable_trx_id" onchange="toggleTrxIdSettings()" style="width: 17px; height: 17px;" />
+                  <span>🆔 Sertakan ID Transaksi Otomatis pada Target URL (Kasus Spesial Server API)</span>
+                </label>
+
+                <div id="trxIdSettingsContainer" style="display: none; margin-top: 14px; padding-top: 14px; border-top: 1px dashed #cbd5e1;">
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px;">
+                    
+                    <!-- 1. Pilihan Variable URL -->
+                    <label style="display: grid; gap: 4px;">
+                      <span style="font-size: 12px; font-weight: 600; color: #1e40af;">Pilih Variable pada URL Target *</span>
+                      <select id="trxIdVariableSelect" onchange="handleTrxIdVariableSelectChange()" style="height: 42px; font-family: monospace; font-size: 13px; font-weight: 600;">
+                        <option value="">-- Ketik URL dahulu / Pilih Variable --</option>
+                      </select>
+                      <input type="text" id="trxIdVariableCustom" placeholder="Ketik nama variable (contoh: idtrx)" style="margin-top: 6px; height: 38px; font-family: monospace; font-size: 12px; display: none;" oninput="updateTrxIdPreview()" />
+                      <small style="color: var(--muted); font-size: 11px;">Variable di Target URL yang akan diisi ID transaksi (contoh: <code>idtrx</code> atau <code>refid</code>).</small>
+                    </label>
+
+                    <!-- 2. Prefix ID Transaksi -->
+                    <label style="display: grid; gap: 4px;">
+                      <span style="font-size: 12px; font-weight: 600; color: #1e40af;">Prefix ID Transaksi (Huruf/Kode) *</span>
+                      <input 
+                        type="text" 
+                        id="trxIdPrefix" 
+                        name="trx_id_prefix" 
+                        placeholder="Contoh: rt (Redeem Telkomsel)" 
+                        oninput="updateTrxIdPreview()"
+                        style="height: 42px; font-family: monospace; font-size: 13px; font-weight: 600;" 
+                      />
+                      <small style="color: var(--muted); font-size: 11px;">Kode awalan ID (contoh: <code>rt</code>, <code>rx</code>, <code>ra</code>).</small>
+                    </label>
+
+                    <!-- 3. Nomor Urut Terakhir / Awal (Counter) -->
+                    <label style="display: grid; gap: 4px;">
+                      <span style="font-size: 12px; font-weight: 600; color: #1e40af;">Nomor Urut Terakhir / Awal</span>
+                      <input 
+                        type="number" 
+                        id="trxIdLastNumber" 
+                        name="trx_id_last_number" 
+                        value="1000" 
+                        min="1" 
+                        oninput="updateTrxIdPreview()"
+                        style="height: 42px; font-family: monospace; font-size: 13px; font-weight: 600;" 
+                      />
+                      <small style="color: var(--muted); font-size: 11px;">Counter angka (contoh: isi <code>1000</code> agar transaksi pertama = <code>1001</code>).</small>
+                    </label>
+                  </div>
+
+                  <!-- Preview Box -->
+                  <div style="margin-top: 12px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 10px 14px; font-size: 12px; color: #1e40af; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+                    <span>💡 Contoh ID yang akan di-generate otomatis: <strong id="trxIdPreviewBadge" style="font-family: monospace; font-size: 13px; background: white; padding: 2px 8px; border-radius: 4px; border: 1px solid #93c5fd;">rt1001</strong> (lalu rt1002, dst.)</span>
+                    <span style="font-size: 11px; color: #2563eb;">Otomatis berbeda setiap kali redeem, kecuali retry voucher & nomor sama.</span>
+                  </div>
+                </div>
+              </div>
             </label>
           </div>
 
@@ -396,6 +459,7 @@ function renderTemplateTable(items) {
           <span class="truncate" style="max-width: 250px; font-family: monospace; font-size: 11px; color: var(--primary);" title="${escapeHtml(t.base_target_url)}">
             ${escapeHtml(t.base_target_url)}
           </span>
+          ${t.trx_id_variable ? `<br><span class="badge" style="background:#e0e7ff; color:#3730a3; font-size:10px; margin-top:3px; display:inline-block;" title="ID Transaksi Otomatis aktif">🆔 ${escapeHtml(t.trx_id_variable)}: ${escapeHtml(t.trx_id_prefix || 'rt')}...</span>` : ''}
         </td>
         <td><span style="font-weight: 600; color: #166534; font-size: 12px;">${escapeHtml(t.success_keyword || '-')}</span></td>
         <td><span style="font-weight: 600; color: #991b1b; font-size: 12px;">${escapeHtml(t.failed_keyword || '-')}</span></td>
@@ -460,6 +524,138 @@ function syncDefaultSenderDropdown(selectedValue = '') {
   }
 }
 
+// Helper Pengaturan ID Transaksi Otomatis
+function toggleTrxIdSettings() {
+  const enabled = document.getElementById('enableTrxId').checked;
+  const container = document.getElementById('trxIdSettingsContainer');
+  if (container) {
+    container.style.display = enabled ? 'block' : 'none';
+  }
+  if (enabled) {
+    const url = document.getElementById('baseTargetUrl').value;
+    syncTrxIdVariableDropdown(url, document.getElementById('trxIdVariableSelect').value);
+    updateTrxIdPreview();
+  }
+}
+
+function extractUrlVariables(url) {
+  const vars = new Set();
+  if (!url) return [];
+
+  // 1. Ekstrak dari query string (?a=b&c=d)
+  try {
+    const qIndex = url.indexOf('?');
+    if (qIndex !== -1) {
+      const queryString = url.substring(qIndex + 1);
+      const pairs = queryString.split('&');
+      pairs.forEach(pair => {
+        const parts = pair.split('=');
+        const k = parts[0].trim();
+        if (k && !k.startsWith('{')) {
+          vars.add(k);
+        }
+      });
+    }
+  } catch (e) {}
+
+  // 2. Ekstrak placeholder {var}
+  const matches = url.matchAll(/\{([a-zA-Z0-9_.-]+)\}/g);
+  for (const match of matches) {
+    if (match[1]) vars.add(match[1]);
+  }
+
+  return Array.from(vars);
+}
+
+function syncTrxIdVariableDropdown(url, selectedVar = '') {
+  const select = document.getElementById('trxIdVariableSelect');
+  if (!select) return;
+
+  const currentVal = selectedVar || select.value;
+  const vars = extractUrlVariables(url);
+
+  select.innerHTML = '';
+
+  if (vars.length === 0) {
+    select.innerHTML = '<option value="">-- Ketik URL Target di atas dahulu --</option>';
+  } else {
+    vars.forEach(v => {
+      const opt = document.createElement('option');
+      opt.value = v;
+      opt.textContent = v + (['idtrx', 'trxid', 'refid', 'id'].includes(v.toLowerCase()) ? ' (Direkomendasikan)' : '');
+      select.appendChild(opt);
+    });
+  }
+
+  // Tambahkan opsi kustom
+  const customOpt = document.createElement('option');
+  customOpt.value = '__custom__';
+  customOpt.textContent = '+ Ketik nama variable lain...';
+  select.appendChild(customOpt);
+
+  if (currentVal && vars.includes(currentVal)) {
+    select.value = currentVal;
+    document.getElementById('trxIdVariableCustom').style.display = 'none';
+  } else if (currentVal && currentVal !== '__custom__') {
+    select.value = '__custom__';
+    const customInp = document.getElementById('trxIdVariableCustom');
+    customInp.value = currentVal;
+    customInp.style.display = 'block';
+  } else {
+    // Cari yang bernuansa trx jika ada
+    const candidate = vars.find(v => ['idtrx', 'trxid', 'refid', 'trx_id'].includes(v.toLowerCase()));
+    if (candidate) {
+      select.value = candidate;
+    } else if (vars.length > 0) {
+      select.value = vars[0];
+    }
+    document.getElementById('trxIdVariableCustom').style.display = 'none';
+  }
+}
+
+function handleTrxIdVariableSelectChange() {
+  const select = document.getElementById('trxIdVariableSelect');
+  const customInp = document.getElementById('trxIdVariableCustom');
+  if (!select || !customInp) return;
+  const isCustom = select.value === '__custom__';
+  customInp.style.display = isCustom ? 'block' : 'none';
+  if (isCustom) {
+    customInp.focus();
+  }
+  updateTrxIdPreview();
+}
+
+function handleBaseTargetUrlInput() {
+  const url = document.getElementById('baseTargetUrl').value;
+  const currentVar = document.getElementById('trxIdVariableSelect').value;
+  syncTrxIdVariableDropdown(url, currentVar);
+
+  // Auto-detect prefix jika ada parameter idtrx=rt1001 di URL
+  const prefixInput = document.getElementById('trxIdPrefix');
+  if (prefixInput && !prefixInput.value.trim()) {
+    const match = url.match(/[?&](?:idtrx|trxid|refid)=([a-zA-Z]+)(\d+)/i);
+    if (match) {
+      prefixInput.value = match[1];
+      const startNum = parseInt(match[2], 10);
+      if (!isNaN(startNum)) {
+        document.getElementById('trxIdLastNumber').value = Math.max(1, startNum - 1);
+      }
+      document.getElementById('enableTrxId').checked = true;
+      toggleTrxIdSettings();
+    }
+  }
+
+  updateTrxIdPreview();
+}
+
+function updateTrxIdPreview() {
+  const badge = document.getElementById('trxIdPreviewBadge');
+  if (!badge) return;
+  const prefix = document.getElementById('trxIdPrefix')?.value.trim() || 'rt';
+  const lastNum = parseInt(document.getElementById('trxIdLastNumber')?.value, 10) || 1000;
+  badge.textContent = prefix + (lastNum + 1);
+}
+
 // 2. Pilih Template untuk Diedit
 function selectTemplateForEdit(id) {
   const t = allTemplates.find(item => item.id === id);
@@ -486,6 +682,16 @@ function selectTemplateForEdit(id) {
 
   document.getElementById('templateIsDefault').checked = !!t.is_default;
   document.getElementById('baseTargetUrl').value = t.base_target_url || '';
+
+  // Sinkronkan pengaturan ID Transaksi
+  const hasTrxId = !!t.trx_id_variable;
+  document.getElementById('enableTrxId').checked = hasTrxId;
+  toggleTrxIdSettings();
+  syncTrxIdVariableDropdown(t.base_target_url || '', t.trx_id_variable || '');
+  document.getElementById('trxIdPrefix').value = t.trx_id_prefix || '';
+  document.getElementById('trxIdLastNumber').value = t.trx_id_last_number || 1000;
+  updateTrxIdPreview();
+
   document.getElementById('successKeyword').value = t.success_keyword || '';
   document.getElementById('successCustomMessage').value = t.success_custom_message || '';
   document.getElementById('pendingKeyword').value = t.pending_keyword || '';
@@ -514,7 +720,15 @@ function createNewTemplateForm() {
   document.getElementById('templateAllowedUsernames').value = '';
   syncDefaultSenderDropdown('');
   document.getElementById('templateIsDefault').checked = false;
-  document.getElementById('baseTargetUrl').value = 'https://example.com/check-voucher?voucher={voucher}';
+  document.getElementById('baseTargetUrl').value = 'https://example.com/check-voucher?username={username}&voucher={voucher}';
+
+  document.getElementById('enableTrxId').checked = false;
+  toggleTrxIdSettings();
+  syncTrxIdVariableDropdown('');
+  document.getElementById('trxIdPrefix').value = '';
+  document.getElementById('trxIdLastNumber').value = '1000';
+  updateTrxIdPreview();
+
   document.getElementById('successKeyword').value = 'SUKSES';
   document.getElementById('successCustomMessage').value = 'Voucher berhasil divalidasi dan aktif.';
   document.getElementById('pendingKeyword').value = 'menunggu';
@@ -564,6 +778,20 @@ async function handleSaveTemplate(e) {
   saveBtnIcon.textContent = '⏳';
   saveBtnText.textContent = 'Menyimpan...';
 
+  const enableTrxId = document.getElementById('enableTrxId').checked;
+  let trxIdVariable = '';
+  let trxIdPrefix = '';
+  let trxIdLastNumber = 1000;
+
+  if (enableTrxId) {
+    const varSelect = document.getElementById('trxIdVariableSelect').value;
+    trxIdVariable = (varSelect === '__custom__')
+      ? document.getElementById('trxIdVariableCustom').value.trim()
+      : varSelect.trim();
+    trxIdPrefix = document.getElementById('trxIdPrefix').value.trim() || 'rt';
+    trxIdLastNumber = parseInt(document.getElementById('trxIdLastNumber').value, 10) || 1000;
+  }
+
   const payload = {
     id: id,
     name: name,
@@ -572,6 +800,9 @@ async function handleSaveTemplate(e) {
     allowed_usernames: allowedUsernames,
     is_default: isDefault,
     base_target_url: baseTargetUrl,
+    trx_id_variable: trxIdVariable,
+    trx_id_prefix: trxIdPrefix,
+    trx_id_last_number: trxIdLastNumber,
     success_keyword: successKeyword,
     success_custom_message: successCustomMessage,
     pending_keyword: pendingKeyword,

@@ -57,6 +57,93 @@ if ($pdo) {
     }
 }
 
+if ($action === 'get_next_trx_id') {
+    require_once 'includes/voucher_config.php';
+    $template_id = trim($_GET['template_id'] ?? ($_POST['template_id'] ?? ''));
+    $tujuan = trim($_GET['tujuan'] ?? ($_POST['tujuan'] ?? ''));
+    $voucher = trim($_GET['voucher'] ?? ($_POST['voucher'] ?? ''));
+    $force_new = !empty($_GET['force_new']) || !empty($_POST['force_new']);
+
+    $config = getVoucherTemplateById($template_id);
+    $variable = trim($config['trx_id_variable'] ?? '');
+    $prefix = trim($config['trx_id_prefix'] ?? '');
+    $lastNumber = intval($config['trx_id_last_number'] ?? 1000);
+
+    if ($variable === '') {
+        echo json_encode([
+            'status' => 'success',
+            'has_trx_id' => false
+        ]);
+        exit;
+    }
+
+    if ($prefix === '') {
+        $prefix = 'rt';
+    }
+
+    // 1. Cek aturan khusus:
+    // "setiap kali redeem itu harus menggunakan id yang berbeda, 
+    //  kecuali ingin meredeem voucher ke nomor yang sama dengan voucher sama mungkin karena gangguan"
+    if (!$force_new && $voucher !== '' && $tujuan !== '' && $pdo) {
+        try {
+            $stmt = $pdo->prepare("SELECT trx_no FROM redeem_logs 
+                WHERE template_id = ? AND voucher = ? AND tujuan = ? AND trx_no IS NOT NULL AND trx_no != '' 
+                ORDER BY id DESC LIMIT 1");
+            $stmt->execute([$template_id, $voucher, $tujuan]);
+            $existingTrx = $stmt->fetchColumn();
+            if ($existingTrx) {
+                echo json_encode([
+                    'status' => 'success',
+                    'has_trx_id' => true,
+                    'variable' => $variable,
+                    'prefix' => $prefix,
+                    'trx_id' => $existingTrx,
+                    'is_reuse' => true,
+                    'message' => 'Menggunakan ID Transaksi sebelumnya karena nomor tujuan & voucher sama (retry gangguan).'
+                ]);
+                exit;
+            }
+        } catch (Exception $e) {}
+    }
+
+    // 2. Jika bukan retry atau nomor/voucher berbeda: Cari angka tertinggi berikutnya
+    $maxNumber = $lastNumber;
+
+    if ($pdo) {
+        try {
+            $pattern = $prefix . '%';
+            $stmt = $pdo->prepare("SELECT trx_no FROM redeem_logs 
+                WHERE template_id = ? AND trx_no LIKE ? 
+                ORDER BY id DESC LIMIT 50");
+            $stmt->execute([$template_id, $pattern]);
+            $rows = $stmt->fetchAll(PDO::FETCH_COLUMN);
+            foreach ($rows as $trxVal) {
+                if (preg_match('/^' . preg_quote($prefix, '/') . '(\d+)$/i', $trxVal, $matches)) {
+                    $num = intval($matches[1]);
+                    if ($num > $maxNumber) {
+                        $maxNumber = $num;
+                    }
+                }
+            }
+        } catch (Exception $e) {}
+    }
+
+    $nextNumber = $maxNumber + 1;
+    $nextTrxId = $prefix . $nextNumber;
+
+    echo json_encode([
+        'status' => 'success',
+        'has_trx_id' => true,
+        'variable' => $variable,
+        'prefix' => $prefix,
+        'trx_id' => $nextTrxId,
+        'next_number' => $nextNumber,
+        'is_reuse' => false,
+        'message' => 'ID Transaksi baru berhasil dibuat.'
+    ]);
+    exit;
+}
+
 if ($action === 'list_senders') {
     if (!$pdo) {
         echo json_encode(['status' => 'success', 'data' => [['id' => 1, 'username' => '089523098721', 'label' => 'Akun Utama Tri']]]);
@@ -249,11 +336,43 @@ if ($action === 'recheck_item') {
             exit;
         }
 
-        if (strpos($baseUrl, '{voucher}') !== false) {
-            $targetUrl = str_replace('{voucher}', urlencode($voucher), $baseUrl);
+        $pengirim = $row['pengirim'] ?? '';
+        $tujuan = $row['tujuan'] ?? '';
+
+        $targetUrl = $baseUrl;
+        if (strpos($targetUrl, '{voucher}') !== false) {
+            $targetUrl = str_replace('{voucher}', urlencode($voucher), $targetUrl);
         } else {
-            $separator = (strpos($baseUrl, '?') !== false) ? '&' : '?';
-            $targetUrl = $baseUrl . $separator . 'voucher=' . urlencode($voucher);
+            $separator = (strpos($targetUrl, '?') !== false) ? '&' : '?';
+            $targetUrl = $targetUrl . $separator . 'voucher=' . urlencode($voucher);
+        }
+
+        if (strpos($targetUrl, '{username}') !== false) {
+            $targetUrl = str_replace('{username}', urlencode($pengirim), $targetUrl);
+        } elseif (strpos($targetUrl, '{user}') !== false) {
+            $targetUrl = str_replace('{user}', urlencode($pengirim), $targetUrl);
+        } elseif (strpos($targetUrl, '{pengirim}') !== false) {
+            $targetUrl = str_replace('{pengirim}', urlencode($pengirim), $targetUrl);
+        }
+
+        if (strpos($targetUrl, '{tujuan}') !== false) {
+            $targetUrl = str_replace('{tujuan}', urlencode($tujuan), $targetUrl);
+        } elseif (strpos($targetUrl, '{target}') !== false) {
+            $targetUrl = str_replace('{target}', urlencode($tujuan), $targetUrl);
+        }
+
+        // Ganti variable ID Transaksi dengan trx_no yang tersimpan pada item ini
+        $trxIdVariable = trim($config['trx_id_variable'] ?? '');
+        $savedTrxNo = trim($row['trx_no'] ?? '');
+        if ($trxIdVariable !== '' && $savedTrxNo !== '') {
+            if (strpos($targetUrl, '{' . $trxIdVariable . '}') !== false) {
+                $targetUrl = str_replace('{' . $trxIdVariable . '}', urlencode($savedTrxNo), $targetUrl);
+            } elseif (preg_match('/([?&]' . preg_quote($trxIdVariable, '/') . '=)[^&]*/i', $targetUrl)) {
+                $targetUrl = preg_replace('/([?&]' . preg_quote($trxIdVariable, '/') . '=)[^&]*/i', '${1}' . urlencode($savedTrxNo), $targetUrl);
+            } else {
+                $separator = (strpos($targetUrl, '?') !== false) ? '&' : '?';
+                $targetUrl .= $separator . urlencode($trxIdVariable) . '=' . urlencode($savedTrxNo);
+            }
         }
 
         $ch = curl_init();
@@ -357,6 +476,19 @@ if ($action === 'save') {
             $message,
             $raw_response
         ]);
+
+        // Perbarui counter terakhir pada template jika nomor trx_no lebih besar
+        if ($template_id && $trx_no) {
+            if (preg_match('/(\d+)$/', $trx_no, $numMatch)) {
+                $usedNum = intval($numMatch[1]);
+                try {
+                    $updStmt = $pdo->prepare("UPDATE voucher_templates 
+                        SET trx_id_last_number = GREATEST(COALESCE(trx_id_last_number, 0), ?) 
+                        WHERE id = ?");
+                    $updStmt->execute([$usedNum, $template_id]);
+                } catch (Exception $eUpd) {}
+            }
+        }
 
         echo json_encode([
             'status' => 'success',

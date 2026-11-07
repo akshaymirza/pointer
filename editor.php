@@ -51,11 +51,41 @@ include 'includes/sidebar.php';
           <textarea id="apiUrl" required rows="4" placeholder="https://server/api/check?serialNumber={serialNumber}"></textarea>
           <small>Gunakan {parameter} untuk membuat input dinamis.</small>
         </label>
-        <label class="wide-field">
-          <span>Preset Values per Parameter <em>optional</em></span>
-          <textarea id="paramOptions" rows="4" placeholder="serialNumber: 111111, 222222, 333333&#10;invoice: INV-001, INV-002"></textarea>
-          <small>Format: nama_parameter: nilai1, nilai2, ... (satu baris per parameter). Di halaman Generate Output, parameter ini tampil sebagai dropdown pilihan, plus opsi "Nomor lain" untuk isi manual. Kalau parameter tidak didaftarkan di sini, tetap muncul sebagai input teks biasa.</small>
-        </label>
+        <!-- PENGATURAN PRESET VALUES & NILAI UTAMA (DEFAULT) KHUSUS TEMPLATE INI (BOX BIRU EKSKLUSIF) -->
+        <div class="wide-field" style="grid-column: 1 / -1; background: #eff6ff; border: 1.5px solid #bfdbfe; border-radius: 14px; padding: 18px; margin-top: 6px;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+            <strong style="color: #1e40af; font-size: 14px; display: flex; align-items: center; gap: 8px;">
+              <span>📱</span> Pengaturan Nilai Preset & Default Khusus Template Ini
+            </strong>
+            <span class="badge" style="background: #dbeafe; color: #1e40af; font-size: 11px; border: 1px solid #93c5fd;">Eksklusif per Template</span>
+          </div>
+
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; margin-bottom: 8px;">
+            <label>
+              <span style="font-size: 13px; font-weight: 600; color: #1e40af;">Daftar Nilai / Preset Values (Bisa Lebih Dari 1) *</span>
+              <textarea 
+                id="paramOptions" 
+                rows="3" 
+                placeholder="Contoh:&#10;serialNumber: 111111, 222222, 333333&#10;invoice: INV-001, INV-002"
+                style="height: 80px; font-family: monospace; font-size: 13px; font-weight: 600; line-height: 1.5; resize: vertical;"
+              ></textarea>
+              <small style="color: #1e40af; font-size: 11px;">1 nilai per baris atau pisahkan dengan koma (format: <code>param: nilai1, nilai2</code> atau langsung nomor jika 1 parameter).</small>
+            </label>
+
+            <label>
+              <span style="font-size: 13px; font-weight: 600; color: #1e40af;">Nilai Utama (Default Terpilih)</span>
+              <div id="paramDefaultsContainer" style="display: flex; flex-direction: column; gap: 8px;">
+                <select id="paramDefaultFallback" disabled style="height: 46px; font-family: monospace; font-size: 14px; font-weight: 600; background: white;">
+                  <option value="">-- Masukkan preset values di sebelah kiri dahulu --</option>
+                </select>
+              </div>
+              <small style="color: #1e40af; font-size: 11px;">Pilih 1 nilai/nomor dari daftar di kiri yang otomatis terpilih di Halaman Generate Output.</small>
+            </label>
+          </div>
+          <p style="margin: 0; font-size: 12px; color: #1e40af; line-height: 1.4;">
+            💡 <em>Catatan:</em> Di halaman Generate Output, saat template ini dipilih, hanya daftar nilai preset di atas yang muncul sebagai dropdown pilihan dengan nilai default langsung terpilih (plus opsi isi manual).
+          </p>
+        </div>
       </div>
     </section>
 

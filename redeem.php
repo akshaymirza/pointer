@@ -38,7 +38,7 @@ include 'includes/sidebar.php';
         <div class="card-heading" style="margin-bottom: 14px;">
           <div>
             <h2>Form Redeem Voucher</h2>
-            <p>Masukkan kode voucher untuk diverifikasi dan dieksekusi.</p>
+            <p>Masukkan kode gesek untuk diverifikasi dan dieksekusi.</p>
           </div>
         </div>
 
@@ -67,11 +67,11 @@ include 'includes/sidebar.php';
           </label>
 
           <div class="dynamic-form" style="margin: 0 0 16px 0;">
-            <!-- Parameter Pengirim & Nomor Tujuan (Tersusun ke bawah) -->
+            <!-- Parameter Tetap: Username / Pengirim Khusus Template -->
             <div style="display: flex; flex-direction: column; gap: 14px;">
               <label>
                 <div style="display:flex; justify-content:space-between; align-items:center;">
-                  <span style="font-weight: 600;">Nomor Pengirim (Username) Khusus Template</span>
+                  <span style="font-weight: 600;">Parameter Tetap: Username / Pengirim</span>
                   <a href="voucher_settings.php" target="_blank" style="font-size: 11px; text-decoration: none; color: var(--primary); font-weight: 600;" title="Kelola username untuk setiap template di Voucher Settings">
                     ⚙️ Kelola di Voucher Settings
                   </a>
@@ -81,35 +81,71 @@ include 'includes/sidebar.php';
                     <option value="">-- Pilih Template Terlebih Dahulu --</option>
                   </select>
                 </div>
-                <!-- Hidden input untuk menjaga kompatibilitas nilai username -->
+                <!-- Hidden input untuk menjaga nilai username terpilih -->
                 <input type="hidden" id="usernameInput" value="" />
+                <small style="color: var(--muted); font-size: 11px;">Otomatis menggantikan placeholder <code>{username}</code> di target URL template.</small>
               </label>
 
-              <label>
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                  <span style="font-weight: 600;">Nomor Tujuan *</span>
-                  <span style="font-size:11px; font-weight:normal; color:var(--muted);">Diisi oleh user</span>
+              <!-- Parameter Tambahan: Nomor Tujuan (Opsional) -->
+              <div style="margin-top: -6px;">
+                <button type="button" onclick="toggleOptionalTujuan()" id="toggleTujuanBtn" style="background:none; border:none; color:var(--primary); font-size:12px; cursor:pointer; padding:0; font-weight:600; display:inline-flex; align-items:center; gap:4px;">
+                  <span>+ Tambah Parameter Nomor Tujuan (Opsional)</span>
+                </button>
+                <div id="optionalTujuanWrap" style="display:none; margin-top:8px;">
+                  <label style="margin:0;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                      <span style="font-size:12px; font-weight:600;">Nomor Tujuan (Opsional)</span>
+                      <span style="font-size:11px; color:var(--muted);">Placeholder <code>{tujuan}</code> jika ada</span>
+                    </div>
+                    <input 
+                      type="text" 
+                      id="tujuanInput" 
+                      value="" 
+                      placeholder="Contoh: 0895639154834 (opsional)" 
+                      oninput="handleTujuanInput(this.value)"
+                      style="height: 42px; font-family: monospace; font-size: 13px;"
+                    />
+                  </label>
                 </div>
-                <input 
-                  type="text" 
-                  id="tujuanInput" 
-                  value="" 
-                  placeholder="Contoh: 0895639154834 (kosong secara default)" 
-                  oninput="handleTujuanInput(this.value)"
-                  required 
-                  style="height: 46px; font-family: monospace; font-size: 14px; font-weight: 600;"
-                />
-                <small style="color: var(--muted); font-size: 11px;">Nomor tujuan wajib diisi sebelum memproses redeem.</small>
-              </label>
+              </div>
+
+              <!-- Parameter Tambahan: ID Transaksi Otomatis (Jika template membutuhkannya) -->
+              <div id="trxIdRow" style="display: none; margin-top: 10px; padding: 12px 14px; background: #eff6ff; border: 1.5px solid #bfdbfe; border-radius: 12px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                  <span style="font-size: 13px; font-weight: 700; color: #1e40af; display: flex; align-items: center; gap: 6px;">
+                    <span>🆔</span> ID Transaksi Otomatis (<code id="trxIdVarNameLabel" style="color: #1e40af; background: white; padding: 1px 6px; border-radius: 4px; border: 1px solid #bfdbfe;">idtrx</code>)
+                  </span>
+                  <span id="trxIdStatusBadge" class="badge" style="background: #dbeafe; color: #1e40af; font-size: 11px;">Otomatis Baru</span>
+                </div>
+                <div style="display: flex; gap: 8px; align-items: center;">
+                  <input 
+                    type="text" 
+                    id="currentTrxIdInput" 
+                    readonly 
+                    style="flex: 1; height: 42px; font-family: monospace; font-size: 14px; font-weight: 700; color: #1e40af; background: white;"
+                  />
+                  <button type="button" class="secondary-button" onclick="generateNewTrxId(true)" title="Generate ID Baru Manual" style="height: 42px; min-height: 42px; padding: 0 14px; font-size: 12px; white-space: nowrap; font-weight: 600;">
+                    🔄 ID Baru
+                  </button>
+                </div>
+                <small id="trxIdHint" style="color: #1e40af; font-size: 11px; display: block; margin-top: 4px; line-height: 1.4;">
+                  ID transaksi otomatis dibuat berbeda setiap kali redeem. Jika nomor tujuan & voucher sama pernah diredeem (karena gangguan), ID lama akan otomatis digunakan kembali.
+                </small>
+              </div>
             </div>
 
             <!-- Baris 2: Input Utama Nomor Voucher -->
-            <label style="margin-top: 6px;">
+            <label style="margin-top: 10px;">
               <div style="display:flex; justify-content:space-between; align-items:center;">
-                <span style="font-size: 15px; font-weight: 700; color: #1e293b;">Nomor / Kode Voucher</span>
-                <span id="activeTargetBadge" style="font-size: 12px; color: var(--muted); font-weight: 600; background: #f1f5f9; padding: 2px 8px; border-radius: 6px;">
-                  Tujuan: (Belum diisi)
-                </span>
+                <span style="font-size: 15px; font-weight: 700; color: #1e293b;">Nomor / Kode Voucher *</span>
+                <div style="display: flex; gap: 6px; align-items: center;">
+                  <span id="activeUserBadge" style="font-size: 12px; color: var(--primary); font-weight: 600; background: #eff6ff; padding: 2px 8px; border-radius: 6px;">
+                    Username: -
+                  </span>
+                  <span id="activeTargetBadge" style="display: none; font-size: 12px; color: #166534; font-weight: 600; background: #f0fdf4; padding: 2px 8px; border-radius: 6px;">
+                    Tujuan: -
+                  </span>
+                </div>
               </div>
               <input 
                 type="text" 
@@ -119,6 +155,7 @@ include 'includes/sidebar.php';
                 autofocus
                 autocomplete="off"
                 required 
+                oninput="handleVoucherInput(this.value)"
                 style="height: 50px; font-size: 15px; font-family: monospace; letter-spacing: 1px; font-weight: 600;"
               />
             </label>
@@ -377,6 +414,9 @@ function handleTemplateSelectChange(templateId) {
 
   // Perbaikan 1: Terapkan username khusus template (username template lain hilang)
   applyTemplateUsernames(templateId);
+
+  // Periksa & siapkan ID Transaksi jika template membutuhkannya
+  checkOrGenerateTrxId();
 }
 
 function updateActiveTemplateUI(templateId) {
@@ -402,10 +442,11 @@ function updateActiveTemplateUI(templateId) {
   }
 }
 
-// PERBAIKAN 1: Pengaturan Username/Pengirim Eksklusif per Template
+// Pengaturan Username / Parameter Tetap Eksklusif per Template
 function applyTemplateUsernames(templateId) {
   const select = document.getElementById('usernameSelect');
   const hiddenInput = document.getElementById('usernameInput');
+  const userBadge = document.getElementById('activeUserBadge');
   if (!select || !hiddenInput) return;
 
   // Bersihkan semua username sebelumnya (jika ganti template, username template lama hilang)
@@ -415,6 +456,7 @@ function applyTemplateUsernames(templateId) {
     select.innerHTML = '<option value="">-- Pilih Template Terlebih Dahulu --</option>';
     select.disabled = true;
     hiddenInput.value = '';
+    if (userBadge) userBadge.textContent = 'Username: -';
     return;
   }
 
@@ -423,6 +465,7 @@ function applyTemplateUsernames(templateId) {
     select.innerHTML = '<option value="">-- Template Tidak Ditemukan --</option>';
     select.disabled = true;
     hiddenInput.value = '';
+    if (userBadge) userBadge.textContent = 'Username: -';
     return;
   }
 
@@ -434,6 +477,7 @@ function applyTemplateUsernames(templateId) {
     select.innerHTML = '<option value="">(Belum ada username untuk template ini)</option>';
     select.disabled = true;
     hiddenInput.value = '';
+    if (userBadge) userBadge.textContent = 'Username: Belum Diatur';
     return;
   }
 
@@ -452,29 +496,128 @@ function applyTemplateUsernames(templateId) {
 
   select.value = defaultUser;
   hiddenInput.value = defaultUser;
+  if (userBadge) userBadge.textContent = 'Username: ' + defaultUser;
 }
 
 function handleSenderChange(val) {
   const hiddenInput = document.getElementById('usernameInput');
   if (hiddenInput) hiddenInput.value = val;
+  const userBadge = document.getElementById('activeUserBadge');
+  if (userBadge) userBadge.textContent = val ? 'Username: ' + val : 'Username: -';
 }
 
-// Handler nomor tujuan yang dimasukkan oleh user
+function toggleOptionalTujuan() {
+  const wrap = document.getElementById('optionalTujuanWrap');
+  const btn = document.getElementById('toggleTujuanBtn');
+  if (!wrap) return;
+  if (wrap.style.display === 'none' || !wrap.style.display) {
+    wrap.style.display = 'block';
+    if (btn) btn.innerHTML = '<span>− Sembunyikan Nomor Tujuan</span>';
+    const input = document.getElementById('tujuanInput');
+    if (input) input.focus();
+  } else {
+    wrap.style.display = 'none';
+    if (btn) btn.innerHTML = '<span>+ Tambah Parameter Nomor Tujuan (Opsional)</span>';
+  }
+}
+
+// Handler nomor tujuan opsional yang dimasukkan oleh user
 function handleTujuanInput(val) {
   const badgeEl = document.getElementById('activeTargetBadge');
   if (badgeEl) {
     const clean = (val || '').trim();
-    badgeEl.textContent = clean ? 'Tujuan: ' + clean : 'Tujuan: (Belum diisi)';
-    badgeEl.style.color = clean ? 'var(--primary)' : 'var(--muted)';
+    if (clean) {
+      badgeEl.style.display = 'inline-block';
+      badgeEl.textContent = 'Tujuan: ' + clean;
+    } else {
+      badgeEl.style.display = 'none';
+    }
+  }
+  debouncedCheckTrxId();
+}
+
+let trxIdDebounceTimer = null;
+function debouncedCheckTrxId() {
+  clearTimeout(trxIdDebounceTimer);
+  trxIdDebounceTimer = setTimeout(() => {
+    checkOrGenerateTrxId(false);
+  }, 350);
+}
+
+function handleVoucherInput(val) {
+  debouncedCheckTrxId();
+}
+
+async function checkOrGenerateTrxId(forceNew = false) {
+  const t = voucherTemplates.find(item => item.id === currentVoucherTemplateId);
+  const row = document.getElementById('trxIdRow');
+  const input = document.getElementById('currentTrxIdInput');
+  const badge = document.getElementById('trxIdStatusBadge');
+  const hint = document.getElementById('trxIdHint');
+  const varLabel = document.getElementById('trxIdVarNameLabel');
+
+  if (!t || !t.trx_id_variable) {
+    if (row) row.style.display = 'none';
+    if (input) input.value = '';
+    return;
+  }
+
+  if (row) row.style.display = 'block';
+  if (varLabel) varLabel.textContent = t.trx_id_variable;
+
+  const voucher = document.getElementById('voucherInput')?.value.trim() || '';
+  const tujuan = document.getElementById('tujuanInput')?.value.trim() || '';
+
+  try {
+    const url = `redeem_api.php?action=get_next_trx_id&template_id=${encodeURIComponent(t.id)}&voucher=${encodeURIComponent(voucher)}&tujuan=${encodeURIComponent(tujuan)}&force_new=${forceNew ? '1' : '0'}`;
+    const res = await fetch(url);
+    const json = await res.json();
+
+    if (json.status === 'success' && json.has_trx_id) {
+      if (input) input.value = json.trx_id;
+
+      if (json.is_reuse) {
+        if (badge) {
+          badge.className = 'badge warning';
+          badge.style.background = '#fef3c7';
+          badge.style.color = '#92400e';
+          badge.textContent = 'ID Sebelumnya (Retry Gangguan)';
+        }
+        if (hint) {
+          hint.textContent = '💡 Voucher & nomor tujuan ini pernah dicoba sebelumnya. Menggunakan ID transaksi lama agar tidak terjadi double-charge saat server gangguan.';
+          hint.style.color = '#92400e';
+        }
+      } else {
+        if (badge) {
+          badge.className = 'badge';
+          badge.style.background = '#dbeafe';
+          badge.style.color = '#1e40af';
+          badge.textContent = 'Otomatis Baru';
+        }
+        if (hint) {
+          hint.textContent = '💡 ID transaksi otomatis dibuat berbeda setiap kali redeem. Jika nomor tujuan & voucher sama pernah diredeem, ID lama akan otomatis digunakan kembali.';
+          hint.style.color = '#1e40af';
+        }
+      }
+    }
+  } catch (e) {
+    console.error('Error fetching trx id:', e);
   }
 }
 
-// Inisialisasi: nomor tujuan selalu kosong secara default sesuai permintaan user
+function generateNewTrxId(forceNew = true) {
+  checkOrGenerateTrxId(forceNew);
+}
+
+// Inisialisasi: nomor tujuan selalu kosong secara default
 function loadSavedConfig() {
   const tujuanEl = document.getElementById('tujuanInput');
   const badgeEl = document.getElementById('activeTargetBadge');
   if (tujuanEl) tujuanEl.value = '';
-  if (badgeEl) badgeEl.textContent = 'Tujuan: (Belum diisi)';
+  if (badgeEl) {
+    badgeEl.style.display = 'none';
+    badgeEl.textContent = 'Tujuan: -';
+  }
 }
 
 function saveConfigToStorage() {
@@ -535,17 +678,12 @@ async function handleRedeemSubmit(e) {
   }
 
   const username = document.getElementById('usernameInput').value.trim();
-  const tujuan = document.getElementById('tujuanInput').value.trim();
+  const tujuanEl = document.getElementById('tujuanInput');
+  const tujuan = tujuanEl ? tujuanEl.value.trim() : '';
   const voucher = document.getElementById('voucherInput').value.trim();
 
   if (!username) {
     alert('Template ini belum memiliki username/pengirim yang diatur admin. Silakan atur di Voucher Settings!');
-    return;
-  }
-
-  if (!tujuan) {
-    alert('Nomor tujuan tidak boleh kosong! Silakan masukkan nomor tujuan atau pilih dari template.');
-    document.getElementById('tujuanInput').focus();
     return;
   }
 
@@ -575,9 +713,13 @@ async function handleRedeemSubmit(e) {
   trxInfoPill.style.display = 'none';
 
   try {
-    // 3. Panggil API Proxy dari Tahap 3 (check_voucher.php) dengan template yang dipilih
+    // 3. Panggil API Proxy dari Tahap 3 (check_voucher.php) dengan template, username, tujuan, dan trx_id
+    const currentTrxId = document.getElementById('currentTrxIdInput')?.value.trim() || '';
     const tplParam = `&template_id=${encodeURIComponent(currentVoucherTemplateId)}`;
-    const proxyEndpoint = `check_voucher.php?voucher=${encodeURIComponent(voucher)}${tplParam}`;
+    const userParam = `&username=${encodeURIComponent(username)}`;
+    const tujuanParam = tujuan ? `&tujuan=${encodeURIComponent(tujuan)}` : '';
+    const trxParam = currentTrxId ? `&trx_id=${encodeURIComponent(currentTrxId)}` : '';
+    const proxyEndpoint = `check_voucher.php?voucher=${encodeURIComponent(voucher)}${tplParam}${userParam}${tujuanParam}${trxParam}`;
     const res = await fetch(proxyEndpoint);
     const json = await res.json();
 
@@ -608,9 +750,11 @@ async function handleRedeemSubmit(e) {
     // Tampilkan status voucher dan no voucher saja untuk hasilnya
     outputBox.value = `Status Voucher : ${(status).toUpperCase()}\nNo Voucher     : ${voucher}`;
 
+    const finalTrxNo = currentTrxId || voucher;
+
     // Update Pill Info
     trxInfoPill.style.display = 'block';
-    document.getElementById('pillTrxNo').textContent = voucher;
+    document.getElementById('pillTrxNo').textContent = finalTrxNo;
     document.getElementById('pillStatus').textContent = (status).toUpperCase();
     if (status === 'success') {
       document.getElementById('pillStatus').style.color = 'var(--success)';
@@ -634,7 +778,7 @@ async function handleRedeemSubmit(e) {
     await saveToDatabase({
       template_id: currentVoucherTemplateId,
       template_name: templateName,
-      trx_no: voucher,
+      trx_no: finalTrxNo,
       pengirim: username || 'Web User',
       tujuan: tujuan || '-',
       voucher: voucher,
@@ -647,6 +791,9 @@ async function handleRedeemSubmit(e) {
     // Kosongkan voucher input agar siap scan/input voucher berikutnya
     document.getElementById('voucherInput').value = '';
     document.getElementById('voucherInput').focus();
+
+    // Siapkan ID Transaksi untuk transaksi berikutnya
+    checkOrGenerateTrxId(true);
 
     // Reload Riwayat Transaksi 1 bulan
     fetchRedeemHistory();
